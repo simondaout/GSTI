@@ -1,0 +1,127 @@
+import numpy as np
+import math,sys
+import pymc
+import operator
+
+from flatten import *
+
+from pyrocko import gf
+from pyrocko.guts import List
+from pyrocko.gf import LocalEngine, StaticTarget, SatelliteTarget,\
+        RectangularSource
+
+class patch:
+    def __init__(self,name,ss,ds,x1,x2,x3,length,width,strike,dip,
+        sig_ss,sig_ds,sig_x1,sig_x2,sig_x3,sig_length,sig_width,sig_strike,sig_dip,
+        dist='Unif'):
+        
+        self.name=name
+        self.ss,self.sss=ss,sig_ss
+        self.ds,self.sds=ds,sig_ds  
+        self.x1,self.sx1=x1,sig_x1 # north top-left corner
+        self.x2,self.sx2=x2,sig_x2 # east top-left corner
+        self.x3,self.sx3=x3,sig_x3
+        self.l,self.sl=length,sig_length
+        self.w,self.sw=width,sig_width
+        self.strike,self.sstrike=strike,sig_strike
+        self.dip,self.sdip=dip,sig_dip
+        self.dist=dist
+
+        # create model vector
+        self.param = ['{} strike slip'.format(self.name),'{} dip slip'.format(self.name),'{} north'.format(self.name),'{} east'.format(self.name),'{} down'.format(self.name),'{} length'.format(self.name),'{} width'.format(self.name),'{} strike'.format(self.name),'{} dip'.format(self.name)]
+        self.m = self.tolist()
+        self.sigmam = self.sigtolist()
+        self.mmin = list(map(operator.sub, self.m, self.sigmam))
+        self.mmax = list(map(operator.add, self.m, self.sigmam))
+
+        # number of parameters per patch
+        self.Mpatch = len(self.m)
+        
+    def build_prior(self):
+        self.sampled = []
+        self.fixed = []
+        self.priors = []
+        for name, m, sig in zip(self.param, self.m, self.sigmam):
+            if sig > 0.:
+                # print name, m-sig, m+sig
+                if self.dist == 'Normal':
+                    p = pymc.Normal(name, mu=m, sd=sig)
+                elif self.dist == 'Unif':
+                    p = pymc.Uniform(name, lower=m-sig, upper=m+sig)
+                else:
+                    print('Problem with prior distribution difinition of parameter {}'.format(name))
+                    sys.exit(1)
+                self.sampled.append(name)
+                self.priors.append(p)
+            elif sig == 0:
+                self.fixed.append(name)
+            else:
+                print('Problem with prior difinition of parameter {}'.format(name))
+                sys.exit(1)
+        # number of free parameters per patch
+        self.Mfree = len(self.sampled)
+        
+    def info(self):
+        print "name segment:, ", self.name,
+        print "# ss     ds     x1(km)     x2(km)     x3(km)    length(km)     width(km)   strike   dip  "
+        print ' {:.2f}   {:.2f}   {:.1f}   {:.1f}   {:.2f}   {:.2f}   {:.2f}    {:d}     {:d}'.format(*(self.tolist()))
+        print "#sigma_ss     sigma_ds     sigma_x1     sigma_x2     sigma_x3    sigma_length     sigma_width   sigma_strike  sigma_dip  "
+        print '  {:.2f}   {:.2f}   {:.1f}   {:.1f}   {:.2f}   {:.2f}   {:.2f}    {:d}     {:d}'.format(*(self.sigtolist()))
+        print
+
+    def tolist(self):
+        return [self.ss,self.ds,self.x1,self.x2,self.x3,self.l,
+        self.w,int(self.strike),int(self.dip)]
+
+    def sigtolist(self):
+        return [self.sss,self.sds,self.sx1,self.sx2,self.sx3,self.sl,
+        self.sw,int(self.sstrike),int(self.sdip)]
+
+    def engine(self,target,store,store_path):
+
+        engine = LocalEngine(store_superdirs=store_path,default_store_id=store)
+
+        # print self.x1*1000., self.x2*1000., self.x3*1000., self.w*1000., self.l*1000., self.dip,
+        # print np.rad2deg(math.atan2(self.ds,self.ss)), self.strike, (self.ss**2+self.ds**2)**0.5
+
+        self.source = RectangularSource(
+            # distances in meters
+            north_shift=self.x1*1000., east_shift=self.x2*1000.,
+            depth=self.x3*1000., width=self.w*1000., length=self.l*1000.,
+            # angles in degree
+            dip=self.dip, rake=np.float(np.rad2deg(math.atan2(self.ds,self.ss))), strike=self.strike,
+            slip=(self.ss**2+self.ds**2)**0.5)
+        # print source
+
+        result = engine.process(self.source, [target])
+        
+        return result.results_list[0][0].result
+
+class segment:
+    def __init__(self,name,ss,ds,x1,x2,x3,length,width,strike,dip,
+        sig_ss,sig_ds,sig_x1,sig_x2,sig_x3,sig_length,sig_width,sig_strike,sig_dip,
+        prior_dist,connectivity=False,conservation=False):
+        
+        self.Mseg = 1
+        self.prior=prior_dist
+        self.connectivity=connectivity
+        self.conservation=conservation
+        self.segments=[]
+
+        # if self.conservation==False and self.connectivity==False:
+        src = patch(name,ss,ds,x1,x2,x3,length,width,strike,dip,
+            sig_ss,sig_ds,sig_x1,sig_x2,sig_x3,sig_length,sig_width,sig_strike,sig_dip)          
+
+        self.segments.append(src)
+        # print src.ss
+        # print self.segments
+        # sys.exit()
+
+# class flower:
+#     self.Mseg = 3
+        
+
+
+
+
+
