@@ -123,7 +123,7 @@ m_init = inv.build_prior()
 # print 
 # print inv.g
 # inv.residualscalar(m_init)
-
+# inv.jacobianscalar(m_init)
 # sys.exit()
 
 print
@@ -146,10 +146,12 @@ if short_optim:
     if bnd[i][0] != bnd[i][1]:
       print 'bounds for parameter {}: {}'.format(inv.name[i],bnd[i])
 
-  # res = opt.least_squares(inv.residual, inv.minit, ftol=1e-10)
-  # res = opt.fmin_slsqp(inv.residualscalar,inv.minit)
-  res = opt.differential_evolution(inv.residualscalar, bounds=bnd,maxiter=5000,\
-    polish=False,disp=True)
+  res = opt.fmin_slsqp(inv.residualscalar,inv.minit)
+  # res = opt.differential_evolution(inv.residualscalar, bounds=bnd,maxiter=5000,\
+  #   polish=False,disp=True)
+  if res[3] != 0:
+    print 'Exit mode %d: %s \n'%(res[3],res[4])
+
   
   elapsed = time.time() - t
   print

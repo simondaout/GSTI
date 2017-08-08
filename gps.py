@@ -6,7 +6,7 @@ import sys
 
 from pyrocko.gf import SatelliteTarget
 
-import pymc3 as pymc
+import pymc
 
 class point:
     def __init__(self,x,y):
@@ -37,7 +37,7 @@ class gpstimeseries:
         self.dim=dim
         self.wdir=wdir
         self.scale=scale
-        self.sigmad=np.atleast_1d(1./weight)
+        self.sigmad=1./weight
         self.proj=proj
         self.extension=extension
         self.base=base
@@ -226,6 +226,16 @@ class gpstimeseries:
         g=np.asarray(self.g(inv,m))
         self.res = np.abs((self.d-g))/self.sigmad
         return self.res
+
+    def jacobian(self,inv,m,epsi):
+        jac=np.zeros((self.N,inv.M))
+        for j in xrange(inv.M):
+          mp = np.copy(m)   
+          mp[j] += epsi 
+          jac[:,j]=-((self.g(inv,mp)-self.g(inv,m))/epsi)
+        return jac
+
+
 
 
 

@@ -187,7 +187,10 @@ class inversion:
         self.Msurface = len(np.array(flatten(self.minit)))
 
         # Faults parameters
-        self.fixed.append(map((lambda x: getattr(x,'fixed')),self.segments))
+        list_of_lists=map((lambda x: getattr(x,'fixed')),self.segments)
+        flattened_list = [y for x in list_of_lists for y in x]
+        for item in flattened_list:
+            self.fixed.append(item)
     
         list_of_lists=map((lambda x: getattr(x,'priors')),self.segments)
         flattened_list = [y for x in list_of_lists for y in x]
@@ -204,33 +207,38 @@ class inversion:
         for item in flattened_list:
             self.mmax.append(item)
         
-        # self.mmin.append(map((lambda x: getattr(x,'mmin')),self.segments))
-        # self.mmax.append(map((lambda x: getattr(x,'mmax')),self.segments))
+        list_of_lists=map((lambda x: getattr(x,'sampled')),self.segments)
+        flattened_list = [y for x in list_of_lists for y in x]
+        for item in flattened_list:
+            self.sampled.append(item)        
 
-        # self.priors.append(map((lambda x: getattr(x,'priors')),self.segments))
-        self.sampled.append(map((lambda x: getattr(x,'sampled')),self.segments))
-        self.minit.append(map((lambda x: getattr(x,'m')),self.segments))
-        self.name.append(map((lambda x: getattr(x,'param')),self.segments))
+        list_of_lists=map((lambda x: getattr(x,'m')),self.segments)
+        flattened_list = [y for x in list_of_lists for y in x]
+        for item in flattened_list:
+            self.minit.append(item)        
+
+        list_of_lists=map((lambda x: getattr(x,'param')),self.segments)
+        flattened_list = [y for x in list_of_lists for y in x]
+        for item in flattened_list:
+            self.name.append(item)
 
         # print
         # convert to array
-        self.fixed = np.array(flatten(self.fixed))
+        self.fixed = np.asarray(flatten(self.fixed))
         # print 'fixed:', self.fixed 
-        self.priors = np.array(self.priors).flatten()
+        self.priors = np.asarray(self.priors).flatten()
         # print 'priors:', self.priors
-        # sys.exit()
-        self.sampled =  np.array(flatten(self.sampled))
+        self.sampled =  np.asarray(flatten(self.sampled))
         # print 'sampled:', self.sampled
-        self.minit =  np.array(flatten(self.minit))
+        self.minit =  np.asarray(flatten(self.minit))
         # print 'minit:', self.minit
-        self.name =  np.array(flatten(self.name))
+        self.name =  np.asarray(flatten(self.name))
         # print 'name:', self.name
         # print
 
-        # self.minit, self.mmin, self.mmax = np.array(self.minit),np.array(self.mmin),np.array(self.mmax)
-
         # initialize m
         self.m = np.copy(self.minit)
+        self.M = len(self.m)
         # sys.exit()
 
         return self.minit
@@ -322,9 +330,40 @@ class inversion:
         return r
 
     def residualscalar(self,theta):
-        res = np.sum(pow(self.residual(theta),2))
+        # norm L1
+        res = np.sum(np.abs(self.residual(theta)))
         # print res
         return res
+
+
+    def jacobian(self,theta):
+        jac = np.zeros((self.N,self.M))
+        
+        epsi=0.0001
+        start=0
+        M = 0
+        for i in xrange(self.Mmanif):
+            manifold = self.manifolds[i]
+            index = manifold.Mbase+self.Mbasis*manifold.Npoints*manifold.dim
+
+            # print theta[:self.Msurface]
+            # sys.exit()
+            mp = as_strided(theta[M:M+index])
+            mpp = as_strided(theta[self.Msurface:])
+
+            m = np.concatenate([mp,mpp])
+
+            jac[start:start+manifold.N,:]=manifold.jacobian(self,m,epsi)
+            
+            start+=manifold.N
+            M += index
+
+        return jac
+
+    def jacobianscalar(self,theta):
+        jac = np.sum(np.abs(self.jacobian(theta)))
+        # print jacres
+        return jac   
 
     def Cov(self):
         Cov = np.zeros((self.N))
