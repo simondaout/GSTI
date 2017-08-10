@@ -34,11 +34,12 @@ class profile:
         self.xpmax,self.xpmin = self.w/2,self.w/2
 
 class inversion:
-    def __init__(self,kernels,basis,manifolds,profile,gmtfiles,store_path='./',store=None,bounds=None):
+    def __init__(self,kernels,basis,timeseries,stacks,profile,gmtfiles,store_path='./',store=None,bounds=None):
         
         self.kernels=flatten(kernels)
         self.basis=flatten(basis)
-        self.manifolds=manifolds
+        self.timeseries=timeseries
+        self.stacks=stacks
         self.profile = profile
         self.store_path=store_path
         self.store=store
@@ -47,10 +48,15 @@ class inversion:
 
         self.Mker = len(self.kernels)
         self.Mbasis = len(self.basis)
-        self.Mmanif = len(self.manifolds)
+        
+        self.Nstacks=len(stacks)
+        self.Nts=len(timeseries)
+
+        self.manifolds=flatten([stacks,timeseries])
+        self.Nmanif = len(self.manifolds)
 
         # load data and build model vector for each manifolds
-        for i in xrange(self.Mmanif):
+        for i in xrange(self.Nmanif):
             self.manifolds[i].load(self)
             self.manifolds[i].info()
 
@@ -92,7 +98,7 @@ class inversion:
         self.d = np.zeros((self.N))
         # print self.N
         start = 0
-        for i in xrange(self.Mmanif):
+        for i in xrange(self.Nmanif):
             # print self.manifolds[i].N, len(self.manifolds[i].d)
             self.d[start:start+self.manifolds[i].N] = self.manifolds[i].d
             start+=self.manifolds[i].N
@@ -109,19 +115,53 @@ class inversion:
         self.minit = []
         self.name = []
         self.mmin, self.mmax = [], []
-
-        for i in xrange(self.Mmanif):
-            manifold = self.manifolds[i]
+        
+        for i in xrange(self.Nstacks):
+            manifold = self.stacks[i]
             # Baseline 
-            for ii in xrange(self.manifolds[i].Mbase):
+            for ii in xrange(manifold.Mbase):
                 name = '{} Baseline {}'.format(manifold.reduction,ii)
                 self.minit.append(manifold.base[ii])
-                self.mmin.append(manifold.base[ii]-manifold.sig_base[ii])
-                self.mmax.append(manifold.base[ii]+manifold.sig_base[ii])
                 self.name.append(name)
                 
                 if manifold.sig_base[ii] > 0.:
                     m, sig = manifold.base[ii], manifold.sig_base[ii]
+                    self.mmin.append(manifold.base[ii]-manifold.sig_base[ii])
+                    self.mmax.append(manifold.base[ii]+manifold.sig_base[ii])
+                    if self.dist == 'Normal':
+                        p = pymc.Normal(name, mu=m, sd=sig)
+                    elif self.dist == 'Unif':
+                        p = pymc.Uniform(name, lower=m-sig, upper=m+sig)
+                    else:
+                        print('Problem with prior distribution difinition of parameter {}'.format(name))
+                        sys.exit(1)
+                    self.sampled.append(name)
+                    self.priors.append(p)
+
+                elif manifold.sig_base[ii] == 0:
+                    self.fixed.append(name)
+
+                else:
+                    print('Problem with prior difinition of parameter {}'.format(name))
+                    sys.exit(1)
+
+        self.Mstacks = len(np.array(flatten(self.minit)))
+        # print self.Mstacks
+        # print self.Nstacks
+        # sys.exit()
+
+        for i in xrange(self.Nts):
+            manifold = self.timeseries[i]
+            # Baseline 
+            for ii in xrange(manifold.Mbase):
+                name = '{} Baseline {}'.format(manifold.reduction,ii)
+                self.minit.append(manifold.base[ii])
+                self.name.append(name)
+                
+                if manifold.sig_base[ii] > 0.:
+                    m, sig = manifold.base[ii], manifold.sig_base[ii]
+                    self.mmin.append(manifold.base[ii]-manifold.sig_base[ii])
+                    self.mmax.append(manifold.base[ii]+manifold.sig_base[ii])
                     if self.dist == 'Normal':
                         p = pymc.Normal(name, mu=m, sd=sig)
                     elif self.dist == 'Unif':
@@ -157,14 +197,14 @@ class inversion:
 
                         name = 'Point:{}{}, dim:{}, basis:{}'.format(point.name,j,ii,self.basis[k].name)
                         self.minit.append(self.basis[k].m)
-                        self.mmin.append(self.basis[k].m-self.basis[k].sigmam)
-                        self.mmax.append(self.basis[k].m+self.basis[k].sigmam)
                         self.name.append(name)
                        
                         # print self.basis[k].sigmam
                         if self.basis[k].sigmam > 0.:
                             
                             m, sig = self.basis[k].m, self.basis[k].sigmam
+                            self.mmin.append(self.basis[k].m-self.basis[k].sigmam)
+                            self.mmax.append(self.basis[k].m+self.basis[k].sigmam)
                             # print name, m, sig
                             if self.basis[k].dist == 'Normal':
                                 p = pymc.Normal(name, mu=m, sd=sig)
@@ -185,6 +225,8 @@ class inversion:
 
         # number of basis parameters
         self.Msurface = len(np.array(flatten(self.minit)))
+        # print self.Msurface
+        # sys.exit()
 
         # Faults parameters
         list_of_lists=map((lambda x: getattr(x,'fixed')),self.segments)
@@ -222,19 +264,27 @@ class inversion:
         for item in flattened_list:
             self.name.append(item)
 
+        self.faults = []
+        list_of_lists=map((lambda x: getattr(x,'sampled')),self.segments)
+        flattened_list = [y for x in list_of_lists for y in x]
+        for item in flattened_list:
+            self.faults.append(item)
+
         # print
         # convert to array
-        self.fixed = np.asarray(flatten(self.fixed))
+        self.fixed = np.array(flatten(self.fixed))
         # print 'fixed:', self.fixed 
-        self.priors = np.asarray(self.priors).flatten()
+        self.priors = np.array(self.priors).flatten()
         # print 'priors:', self.priors
-        self.sampled =  np.asarray(flatten(self.sampled))
+        self.sampled =  np.array(flatten(self.sampled))
         # print 'sampled:', self.sampled
-        self.minit =  np.asarray(flatten(self.minit))
+        self.minit =  np.array(flatten(self.minit))
         # print 'minit:', self.minit
-        self.name =  np.asarray(flatten(self.name))
+        self.name =  np.array(flatten(self.name))
         # print 'name:', self.name
         # print
+        self.faults = np.array(flatten(self.faults))
+
 
         # initialize m
         self.m = np.copy(self.minit)
@@ -248,8 +298,21 @@ class inversion:
         start=0
 
         M = 0
-        for i in xrange(self.Mmanif):
-            manifold = self.manifolds[i]
+        for i in xrange(self.Nstacks):
+            manifold = self.stacks[i]
+            index = manifold.Mbase
+
+            mp = as_strided(theta[M:M+index])
+            mpp = as_strided(theta[self.Msurface:])
+            m = np.concatenate([mp,mpp])
+
+            g[start:start+manifold.N]=manifold.g(self,m)
+            
+            start+=manifold.N
+            M += index
+
+        for i in xrange(self.Nts):
+            manifold = self.timeseries[i]
             index = manifold.Mbase+self.Mbasis*manifold.Npoints*manifold.dim
 
             # print theta[:self.Msurface]
@@ -268,37 +331,24 @@ class inversion:
 
     # @theano.compile.ops.as_op(itypes=[t.lscalar],otypes=[t.dvector])
     def foward(self, theta):
-        msampled = theta
         g = np.zeros((self.N))
 
         # Rebuild the full m vector
         self.m = []
         uu = 0
-        # print len(self.minit)
         for name, initial in zip(self.name, self.minit):
-            # print self.sampled
-            # sys.exit()
-            
             if name in self.sampled:
-                # print uu, name
-                # print msampled[uu]
-                self.m.append(msampled[uu])
+                self.m.append(theta[uu])
                 uu +=  1
             elif name in self.fixed:
-                # print initial
-                # print initial.dtype
                 self.m.append(initial)
-
-        # print np.array(self.m[:self.Msurface])
-        # print self.m[self.Msurface:] 
-        # sys.exit()
 
         self.m = np.array(self.m)
         start=0
         M=0
-        for i in xrange(self.Mmanif):
-            manifold = self.manifolds[i]
-            index = manifold.Mbase+self.Mbasis*manifold.Npoints*manifold.dim
+        for i in xrange(self.Nstacks):
+            manifold = self.stacks[i]
+            index = manifold.Mbase
 
             mp = as_strided(self.m[M:M+index])
             mpp = as_strided(self.m[self.Msurface:])
@@ -308,61 +358,112 @@ class inversion:
             
             start+=manifold.N
             M += index
+
+        for i in xrange(self.Nts):
+            manifold = self.timeseries[i]
+            index = manifold.Mbase+self.Mbasis*manifold.Npoints*manifold.dim
+
+            # print theta[:self.Msurface]
+            # sys.exit()
+            mp = as_strided(self.m[M:M+index])
+            mpp = as_strided(self.m[self.Msurface:])
+
+            m = np.concatenate([mp,mpp])
+
+            g[start:start+manifold.N]=manifold.g(self,m)
+            
+            start+=manifold.N
+            M += index
+
         return g
 
     def residual(self,theta):
         r=np.zeros((self.N))
+
+        # Rebuild the full m vector
+        self.m = []
+        uu = 0
+        for name, initial in zip(self.name, self.minit):
+            if name in self.sampled:
+                self.m.append(theta[uu])
+                uu +=  1
+            elif name in self.fixed:
+                self.m.append(initial)
+
         start=0
         M=0
-        for i in xrange(self.Mmanif):
-            manifold = self.manifolds[i]
-            index = manifold.Mbase+self.Mbasis*manifold.Npoints*manifold.dim
+        for i in xrange(self.Nstacks):
+            manifold = self.stacks[i]
+            index = manifold.Mbase
+
+            mp = as_strided(self.m[M:M+index])
+            mpp = as_strided(self.m[self.Msurface:])
+            m = np.concatenate([mp,mpp])
+            # print m
+
+            r[start:start+manifold.N]=manifold.residual(self,m)
             
-            # rebuild m for each manifold
+            start+=manifold.N
+            M += index
+
+        for i in xrange(self.Nts):
+            manifold = self.timeseries[i]
             index = manifold.Mbase+self.Mbasis*manifold.Npoints*manifold.dim
-            mp = as_strided(theta[M:M+index])
-            mpp = as_strided(theta[self.Msurface:])
+
+            # print theta[:self.Msurface]
+            # sys.exit()
+            mp = as_strided(self.m[M:M+index])
+            mpp = as_strided(self.m[self.Msurface:])
+
             m = np.concatenate([mp,mpp])
 
             r[start:start+manifold.N]=manifold.residual(self,m)
+            
             start+=manifold.N
             M += index
+
         return r
 
     def residualscalar(self,theta):
         # norm L1
-        res = np.sum(np.abs(self.residual(theta)))
-        # print res
+        res = np.sum(self.residual(theta))
         return res
 
 
     def jacobian(self,theta):
         jac = np.zeros((self.N,self.M))
         
-        epsi=0.0001
+        # Rebuild the full m vector
+        self.m = []
+        uu = 0
+        for name, initial in zip(self.name, self.minit):
+            if name in self.sampled:
+                self.m.append(theta[uu])
+                uu +=  1
+            elif name in self.fixed:
+                self.m.append(initial)
+
+        epsi=0.01
         start=0
         M = 0
-        for i in xrange(self.Mmanif):
+        for i in xrange(self.Nmanif):
             manifold = self.manifolds[i]
             index = manifold.Mbase+self.Mbasis*manifold.Npoints*manifold.dim
 
             # print theta[:self.Msurface]
             # sys.exit()
-            mp = as_strided(theta[M:M+index])
-            mpp = as_strided(theta[self.Msurface:])
-
+            mp = as_strided(self.m[M:M+index])
+            mpp = as_strided(self.m[self.Msurface:])
             m = np.concatenate([mp,mpp])
 
             jac[start:start+manifold.N,:]=manifold.jacobian(self,m,epsi)
             
             start+=manifold.N
             M += index
-
         return jac
 
     def jacobianscalar(self,theta):
-        jac = np.sum(np.abs(self.jacobian(theta)))
-        # print jacres
+        jac = np.sum(np.abs(self.jacobian(theta)),axis=0)
         return jac   
 
     def Cov(self):
@@ -383,8 +484,8 @@ class inversion:
         return Cov
 
     def plot_ts_GPS(self):
-        for n in xrange(self.Mmanif):
-            manifold = self.manifolds[n]
+        for n in xrange(self.Nts):
+            manifold = self.timeseries[n]
             if manifold.type=='GPS':
 
                 for i in xrange(manifold.Npoints):
@@ -444,8 +545,8 @@ class inversion:
                 # fig.tight_layout()
 
     def plot_InSAR_maps(self):
-        for n in xrange(self.Mmanif):
-            manifold = self.manifolds[n]
+        for n in xrange(self.Nstacks):
+            manifold = self.stacks[n]
 
             if manifold.type=='InSAR':
                 fig, _ = plt.subplots(1,3,figsize=(12,4))
@@ -474,7 +575,7 @@ class inversion:
                 fig.colorbar(cmap, ax=ax, aspect=5)
 
                 # plot gps stations
-                for nn in xrange(self.Mmanif):
+                for nn in xrange(self.Nmanif):
                   if self.manifolds[nn].type=='GPS':
                     for ii in xrange(self.manifolds[nn].Npoints):
                         gps = self.manifolds[nn].points[ii]

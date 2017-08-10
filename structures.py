@@ -31,8 +31,8 @@ class patch:
         self.param = ['{} strike slip'.format(self.name),'{} dip slip'.format(self.name),'{} north'.format(self.name),'{} east'.format(self.name),'{} down'.format(self.name),'{} length'.format(self.name),'{} width'.format(self.name),'{} strike'.format(self.name),'{} dip'.format(self.name)]
         self.m = self.tolist()
         self.sigmam = self.sigtolist()
-        self.mmin = list(map(operator.sub, self.m, self.sigmam))
-        self.mmax = list(map(operator.add, self.m, self.sigmam))
+        # self.mmin = list(map(operator.sub, self.m, self.sigmam))
+        # self.mmax = list(map(operator.add, self.m, self.sigmam))
 
         # number of parameters per patch
         self.Mpatch = len(self.m)
@@ -41,9 +41,12 @@ class patch:
         self.sampled = []
         self.fixed = []
         self.priors = []
+        self.mmin, self.mmax =[],[]
+
         for name, m, sig in zip(self.param, self.m, self.sigmam):
             if sig > 0.:
                 # print name, m-sig, m+sig
+                self.mmin.append(m-sig), self.mmax.append(m+sig)
                 if self.dist == 'Normal':
                     p = pymc.Normal(name, mu=m, sd=sig)
                 elif self.dist == 'Unif':

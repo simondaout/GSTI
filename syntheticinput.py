@@ -120,8 +120,8 @@ result = engine.process(sources, [satellite_target])
 ##############################################
 
 # convert some dates to decimal time
-# dates = [20090828, 20090708, 20091021]
-dates = [20090828, 20080110, 20100421]
+dates = [20090828, 20090708, 20091021]
+# dates = [20090828, 20080110, 20100421]
 times = date2dec(dates)
 # print times
 # sys.exit()
@@ -191,6 +191,10 @@ for i in xrange(Ngps):
 # plt.show()
 # sys.exit()
 
+# Synthetic sismograms
+
+
+
 # Add random noise
 print 'Add random noise to synthetic data'
 sig_insar = 0.005 
@@ -224,7 +228,7 @@ disp += xr
 #            Save Foward model               #
 ##############################################
 
-#### Uncomment to create new data files ######
+# #### Uncomment to create new data files ######
 
 # # save insar stack
 # fid = open('./synthetic_example/insar/int_20081008-20081114.xylos','w')
@@ -241,9 +245,9 @@ disp += xr
 # # fid.write('\n')
 # # fid.close
 
-# save gps time series
+# # save gps time series
 # for i in xrange(Ngps):
-#     fid = open('./synthetic_example/gps/SYNT-DENSE/'+stations_name[i]+'.neu','w')
+#     fid = open('./synthetic_example/gps/SYNT/'+stations_name[i]+'.neu','w')
 #     d = as_strided(disp[Ninsar+i*len(t):Ninsar+(i+1)*len(t),:])
 #     for ii in xrange(len(t)):
 #         np.savetxt(fid, np.vstack([t[ii], d[ii,1], d[ii,3], d[ii,2], 0.001, 0.001, 0.005]).T)
@@ -273,10 +277,10 @@ coseismic(
     name='2008 event',
     structures=[
         segment(
-            name='zongwulong',ss=0.,ds=slip,x1=4,x2=-12.5,x3=5.,length=12.,width=5.5,strike=108,dip=53,
-            sig_ss=0.,sig_ds=0.,sig_x1=0,sig_x2=0,sig_x3=0,sig_length=0.,sig_width=0.,sig_strike=0,sig_dip=0.,
-            # name='zongwulong',ss=0.,ds=1,x1=4,x2=-12.5,x3=5.,length=10.,width=5.,strike=108,dip=30.,
-            # sig_ss=0.,sig_ds=1.,sig_x1=0,sig_x2=0,sig_x3=0,sig_length=5.,sig_width=3.,sig_strike=0,sig_dip=20.,
+            # name='zongwulong',ss=0.,ds=slip,x1=4,x2=-12.5,x3=5.,length=12.,width=5.5,strike=108,dip=53,
+            # sig_ss=0.,sig_ds=0.,sig_x1=0,sig_x2=0,sig_x3=0,sig_length=0.,sig_width=0.,sig_strike=0,sig_dip=0.,
+            name='zongwulong',ss=0.,ds=1,x1=4,x2=-12.5,x3=5.,length=10.,width=5.,strike=108,dip=53.,
+            sig_ss=0.,sig_ds=1.,sig_x1=0,sig_x2=0,sig_x3=0,sig_length=5.,sig_width=3.,sig_strike=0,sig_dip=0.,
             prior_dist='Unif',connectivity=False,conservation=False,
             )],
     date=tco,
@@ -296,18 +300,14 @@ interseismic(name='interseismic', date=t0, m=0, sigmam=0.01),
 
 # Define data sets
 # Available class: insarstack, insartimeseries, gpsstack, gpstimeseries, waveforms
-data=[
-    # insarstack(network='int_20081008-20081114.xylos',
-    #         reduction='Int.',wdir=maindir+'insar/',proj=projm,
-    #         tmin= times[1], tmax=times[2], los=None,heading=None,
-    #         weight=1./sig_insar,scale=1.,base=[0,0,0],sig_base=[0,0,0],dist='Unif'),
 
-
+# Define timeseries data set: time series will be clean temporally from basis functions
+timeseries=[
     gpstimeseries(
-        network='synt_gps_km_short.txt',
-        reduction='SYNT', 
-        # network='synt_gps_km.txt',
-        # reduction='SYNT-DENSE', # directory where are the time series
+        # network='synt_gps_km_short.txt',
+        # reduction='SYNT', 
+        network='synt_gps_km.txt',
+        reduction='SYNT', # directory where are the time series
         dim=3, # [East, North, Down]: dim=3, [East, North]: dim =2
         wdir=maindir+'gps/',
         scale=1., # scale all values
@@ -318,7 +318,24 @@ data=[
         sig_base=[0,0,0],
         ),
      ]
-     
+
+# Define stack data set: velcoity maps, average displacements GPS vectors, interferograms, ect...
+# Cannot be clean from temporal basis functions
+stacks=[
+    insarstack(network='int_20081008-20081114.xylos',
+            reduction='Int.',wdir=maindir+'insar/',proj=projm,
+            tmin= times[1], tmax=times[2], los=None,heading=None,
+            weight=1./sig_insar,scale=1.,base=[0,0,0],sig_base=[0,0,0],dist='Unif'),
+    ]
+
+# Optimisation
+short_optim = False # if True: fast optimization with scipy
+bayesian = True # if True: bayesian exploration with Metropolis sampling
+MAP = False # if True: display maximum posteriori values using functions in Scipy's optimize
+niter=1000 # number of sampling for bayesian exploration
+nburn=500 # number of burned sampling  
+
+
 # Define profile for plot?
 # Nothing done for the moment
 profile=profile(name='all',x=0,y=0,l=10000,w=1000,strike=0) 
@@ -331,6 +348,8 @@ gmtfiles=[
 
 # define boundaries for the plots
 bounds = [left,right,bottom,top]
+
+
 
 
 

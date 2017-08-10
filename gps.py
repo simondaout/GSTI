@@ -230,9 +230,10 @@ class gpstimeseries:
     def jacobian(self,inv,m,epsi):
         jac=np.zeros((self.N,inv.M))
         for j in xrange(inv.M):
+          # print inv.name[j]
           mp = np.copy(m)   
           mp[j] += epsi 
-          jac[:,j]=-((self.g(inv,mp)-self.g(inv,m))/epsi)
+          jac[:,j]=(self.g(inv,mp)-self.g(inv,m))/epsi
         return jac
 
 

@@ -176,21 +176,22 @@ class insarstack:
         self.base = m[:self.Mbase]
         self.gm += self.reference()        
 
-        for k in xrange(inv.Mbasis):
-            # one m value for each basis and each point
-            # duplicate m for all times
-            mp = as_strided(m[self.Mbase+k*self.Npoints:self.Mbase+(k+1)*self.Npoints])
-            # print mp
-            mpp = np.repeat(mp,self.Nt)
-            # print mpp.dtype
-            # print inv.basis[k].g(self.t).dtype
-            # print
+        # for k in xrange(inv.Mbasis):
+        #     # one m value for each basis and each point
+        #     # duplicate m for all times
+        #     mp = as_strided(m[self.Mbase+k*self.Npoints:self.Mbase+(k+1)*self.Npoints])
+        #     # print mp
+        #     mpp = np.repeat(mp,self.Nt)
+        #     # print mpp.dtype
+        #     # print inv.basis[k].g(self.t).dtype
+        #     # print
 
-            self.gm += mpp*inv.basis[k].g(self.t)
+        #     self.gm += mpp*inv.basis[k].g(self.t)
 
         for k in xrange(len(inv.kernels)):
             kernel = inv.kernels[k]
-            mp = as_strided(m[self.Mbase+inv.Mbasis*self.Npoints:])
+            # mp = as_strided(m[self.Mbase+inv.Mbasis*self.Npoints:])
+            mp = as_strided(m[self.Mbase:])
             for j in xrange(kernel.Mseg):
                 seg =  kernel.segments[j]
                 mpp = as_strided(mp[j*seg.Mpatch:(j+1)*seg.Mpatch])
@@ -209,7 +210,6 @@ class insarstack:
 
         return self.gm
 
-
     def residual(self,inv,m):
         g=np.asarray(self.g(inv,m))
         # print
@@ -218,6 +218,15 @@ class insarstack:
         # # print self.d-g
         self.res = np.abs((self.d-g))/self.sigmad
         return self.res
+
+    def jacobian(self,inv,m,epsi):
+        jac=np.zeros((self.N,inv.M))
+        for j in xrange(inv.M):
+          # print inv.name[j]
+          mp = np.copy(m)   
+          mp[j] += epsi 
+          jac[:,j]=(self.g(inv,mp)-self.g(inv,m))/epsi
+        return jac
 
 
 

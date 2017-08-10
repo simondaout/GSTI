@@ -87,11 +87,11 @@ outstat = inv.outdir+'stat/'
 if not os.path.exists(outstat):
         os.makedirs(outstat)
 
-
 inv = inversion(
 kernels=kernels,
 basis=basis,
-manifolds=data,
+timeseries=timeseries,
+stacks=stacks,
 profile=profile,
 store_path=store_path,
 store=store,
@@ -117,14 +117,19 @@ m_init = inv.build_prior()
 
 
 ### TESTING ###
-## build foward model
-# g = inv.build_gm(m_init)
+inv.build_gm(m_init)
+inv.residual(m_init)
 # inv.foward(inv.priors)
-# print 
-# print inv.g
-# inv.residualscalar(m_init)
-# inv.jacobianscalar(m_init)
+# print inv.residualscalar(m_init)
+# print inv.jacobianscalar(m_init)
 # sys.exit()
+
+# # # plots
+# inv.plot_ts_GPS()
+# inv.plot_InSAR_maps()
+# plt.show()
+# sys.exit()
+
 
 print
 print "---------------------------------------------------------------------------"
@@ -136,22 +141,19 @@ print 'Lenght of the data vector:', len(inv.d)
 print 'Number of Free parameters:', len(inv.priors)
 print
 
-short_optim = True
 if short_optim:
 
   t = time.time() 
   # print inv.mmin
   bnd=column_stack((inv.mmin,inv.mmax))
   for i in xrange(len(bnd)): 
-    if bnd[i][0] != bnd[i][1]:
-      print 'bounds for parameter {}: {}'.format(inv.name[i],bnd[i])
+    print 'bounds for parameter {}: {}'.format(inv.sampled[i],bnd[i])
 
-  res = opt.fmin_slsqp(inv.residualscalar,inv.minit)
+  # res = opt.minimize(inv.residualscalar,inv.priors,method='SLSQP',bounds=bnd)
+  # res = opt.minimize(inv.residualscalar,inv.priors,method='L-BFGS-B',bounds=bnd)
+  # res = opt.fmin_slsqp(inv.residualscalar,inv.priors,bounds=bnd)
   # res = opt.differential_evolution(inv.residualscalar, bounds=bnd,maxiter=5000,\
   #   polish=False,disp=True)
-  if res[3] != 0:
-    print 'Exit mode %d: %s \n'%(res[3],res[4])
-
   
   elapsed = time.time() - t
   print
@@ -160,8 +162,6 @@ if short_optim:
   print res
 
 
-bayesian = False
-MAP = True
 if bayesian:
 
   stochastic = pymc.Normal('Data', 
@@ -186,9 +186,10 @@ if bayesian:
 
   t = time.time()
   for p in inv.priors:
-    model.use_step_method(pymc.Metropolis, p)
+    # model.use_step_method(pymc.Metropolis, p)
+    model.use_step_method(pymc.AdaptiveMetropolis, p)
   
-  model.sample(iter = 10000, burn = 5000, thin=1)
+  model.sample(iter = niter, burn = nburn, thin=1)
   elapsed = time.time() - t
   print
   print "Time elapsed:", elapsed
@@ -235,8 +236,9 @@ for i in xrange(inv.Mker):
 # # plots
 inv.plot_ts_GPS()
 inv.plot_InSAR_maps()
-# if bayesian:
-#   pymc.Matplot.plot(model,format = 'eps')
+if bayesian:
+  for i in xrange(len(inv.faults)):
+    pymc.Matplot.plot(model.trace(inv.faults[i][:]),format = 'eps',,path = outstat)
 plt.show()
 
 
