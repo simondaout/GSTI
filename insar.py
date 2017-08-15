@@ -140,7 +140,7 @@ class insarstack:
     # create orbital function
     def reference(self):
           func = self.base[0]*self.x + self.base[1]*self.y + self.base[2]
-          return  np.repeat(func,2)
+          return  func
 
 
     def info(self):
@@ -176,7 +176,9 @@ class insarstack:
 
         # update reference brame
         self.base = m[:self.Mbase]
-        self.gm += self.reference()        
+        # print self.base
+        self.gm[1::2] += self.reference()  
+        # print self.gm      
 
         # for k in xrange(inv.Mbasis):
         #     # one m value for each basis and each point

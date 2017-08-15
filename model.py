@@ -120,7 +120,7 @@ class inversion:
             manifold = self.stacks[i]
             # Baseline 
             for ii in xrange(manifold.Mbase):
-                name = '{} Baseline {}'.format(manifold.reduction,ii)
+                name = '{} Baseline {} {}'.format(manifold.reduction,ii,manifold.reduction)
                 self.minit.append(manifold.base[ii])
                 self.name.append(name)
                 
@@ -128,10 +128,10 @@ class inversion:
                     m, sig = manifold.base[ii], manifold.sig_base[ii]
                     self.mmin.append(manifold.base[ii]-manifold.sig_base[ii])
                     self.mmax.append(manifold.base[ii]+manifold.sig_base[ii])
-                    if self.dist == 'Normal':
+                    if manifold.dist == 'Normal':
                         p = pymc.Normal(name, mu=m, sd=sig)
-                    elif self.dist == 'Unif':
-                        p = pymc.Uniform(name, lower=m-sig, upper=m+sig)
+                    elif manifold.dist == 'Unif':
+                        p = pymc.Uniform(name, lower=m-sig, upper=m+sig, value=m)
                     else:
                         print('Problem with prior distribution difinition of parameter {}'.format(name))
                         sys.exit(1)
@@ -165,7 +165,7 @@ class inversion:
                     if self.dist == 'Normal':
                         p = pymc.Normal(name, mu=m, sd=sig)
                     elif self.dist == 'Unif':
-                        p = pymc.Uniform(name, lower=m-sig, upper=m+sig)
+                        p = pymc.Uniform(name, lower=m-sig, upper=m+sig, value=m)
                     else:
                         print('Problem with prior distribution difinition of parameter {}'.format(name))
                         sys.exit(1)
@@ -209,7 +209,7 @@ class inversion:
                             if self.basis[k].dist == 'Normal':
                                 p = pymc.Normal(name, mu=m, sd=sig)
                             elif self.basis[k].dist == 'Unif':
-                                p = pymc.Uniform(name, lower=m-sig, upper=m+sig)
+                                p = pymc.Uniform(name, lower=m-sig, upper=m+sig, value=m)
                             else:
                                 print('Problem with prior distribution difinition of parameter {}'.format(name))
                                 sys.exit(1)
@@ -304,6 +304,8 @@ class inversion:
             mp = as_strided(theta[M:M+index])
             mpp = as_strided(theta[self.Msurface:])
             m = np.concatenate([mp,mpp])
+            # print m
+            # print 
 
             # print m
             # sys.exit()
@@ -348,6 +350,13 @@ class inversion:
             elif name in self.fixed:
                 self.m.append(initial)
 
+        # check plan bellow the surface
+        for j in xrange(self.Mseg):
+            depth = as_strided(self.m[self.Msurface+4*(j+1)])
+            width = as_strided(self.m[self.Msurface+6*(j+1)])
+            if (depth < 0.) or (width >= depth):
+               return np.ones((self.N,))*1e14
+
         self.m = np.array(self.m)
         start=0
         M=0
@@ -374,6 +383,7 @@ class inversion:
             mpp = as_strided(self.m[self.Msurface:])
 
             m = np.concatenate([mp,mpp])
+            print m
 
             g[start:start+manifold.N]=manifold.g(self,m)
             

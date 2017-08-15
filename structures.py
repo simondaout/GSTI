@@ -50,7 +50,7 @@ class patch:
                 if self.dist == 'Normal':
                     p = pymc.Normal(name, mu=m, sd=sig)
                 elif self.dist == 'Unif':
-                    p = pymc.Uniform(name, lower=m-sig, upper=m+sig)
+                    p = pymc.Uniform(name, lower=m-sig, upper=m+sig, value=m)
                 else:
                     print('Problem with prior distribution difinition of parameter {}'.format(name))
                     sys.exit(1)

@@ -162,7 +162,7 @@ class gpstimeseries:
         # be different for each stations
         for i in xrange(self.Npoints): 
             point = self.points[i]
-            print point.info()
+            #print point.info()
             gt = as_strided(self.gm[i*self.dim*point.Nt:(i+1)*self.dim*point.Nt])
             # print 'north, east', np.ones(1)*point.y*1000., np.ones(1)*point.x*1000.
 
@@ -211,7 +211,7 @@ class gpstimeseries:
 
                     # update patch parameter
                     seg.ss,seg.ds,seg.x1,seg.x2,seg.x3,seg.l,seg.w,seg.strike,seg.dip = mpp
-                    # print seg.info()
+                    #print seg.info()
 
                     # call pyrocko engine
                     disp = seg.engine(satellite_targets, inv.store, inv.store_path)

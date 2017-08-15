@@ -125,7 +125,7 @@ inv.residual(m_init)
 # print inv.jacobianscalar(m_init)
 # sys.exit()
 
-# # plots
+# plots
 inv.plot_ts_GPS()
 inv.plot_InSAR_maps()
 plt.show()
@@ -229,6 +229,9 @@ print "-------------------------------------------------------------------------
 print ' Posterior model'
 print "---------------------------------------------------------------------------"
 print
+
+# compute residual for plots
+inv.residual(m_init)
 
 for i in xrange(inv.Mker):
     for j in xrange(inv.kernels[i].Mseg):
