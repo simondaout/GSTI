@@ -162,7 +162,7 @@ class gpstimeseries:
         # be different for each stations
         for i in xrange(self.Npoints): 
             point = self.points[i]
-            # print point.info()
+            print point.info()
             gt = as_strided(self.gm[i*self.dim*point.Nt:(i+1)*self.dim*point.Nt])
             # print 'north, east', np.ones(1)*point.y*1000., np.ones(1)*point.x*1000.
 
@@ -198,17 +198,21 @@ class gpstimeseries:
                 # print gt
                 # sys.exit()
 
+            start = 0
             for k in xrange(len(inv.kernels)):
                 kernel = inv.kernels[k]
                 mp = as_strided(m[self.Mbase+inv.Mbasis*self.Npoints*self.dim:])
+                # print mp
+
                 for j in xrange(kernel.Mseg):
                     seg =  kernel.segments[j]
-                    mpp = as_strided(mp[j*seg.Mpatch:(j+1)*seg.Mpatch])
+                    mpp = as_strided(mp[start:start+seg.Mpatch])
+                    # print mpp
 
                     # update patch parameter
                     seg.ss,seg.ds,seg.x1,seg.x2,seg.x3,seg.l,seg.w,seg.strike,seg.dip = mpp
-
                     # print seg.info()
+
                     # call pyrocko engine
                     disp = seg.engine(satellite_targets, inv.store, inv.store_path)
                     # print disp
@@ -217,9 +221,15 @@ class gpstimeseries:
                     components = ['displacement.e', 'displacement.n', 'displacement.d']
 
                     for ii in xrange(len(components)):
+                        # print components[ii]
                         result = disp[components[ii]]
                         gt[point.Nt*ii:point.Nt*(ii+1)] += inv.kernels[k].g(point.t)*result
+                        # print inv.kernels[k].g(point.t)
+                        # print result
+                        # print
 
+                    start += seg.Mpatch
+            # sys.exit()
         return self.gm
 
     def residual(self,inv,m):

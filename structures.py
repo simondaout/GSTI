@@ -11,16 +11,16 @@ from pyrocko.gf import LocalEngine, StaticTarget, SatelliteTarget,\
         RectangularSource
 
 class patch:
-    def __init__(self,name,ss,ds,x1,x2,x3,length,width,strike,dip,
-        sig_ss,sig_ds,sig_x1,sig_x2,sig_x3,sig_length,sig_width,sig_strike,sig_dip,
+    def __init__(self,name,ss,ds,east,north,down,length,width,strike,dip,
+        sig_ss,sig_ds,sig_east,sig_north,sig_down,sig_length,sig_width,sig_strike,sig_dip,
         dist='Unif'):
         
         self.name=name
         self.ss,self.sss=ss,sig_ss
         self.ds,self.sds=ds,sig_ds  
-        self.x1,self.sx1=x1,sig_x1 # north top-left corner
-        self.x2,self.sx2=x2,sig_x2 # east top-left corner
-        self.x3,self.sx3=x3,sig_x3
+        self.x1,self.sx1=north,sig_north # north top-left corner
+        self.x2,self.sx2=east,sig_east # east top-left corner
+        self.x3,self.sx3=down,sig_down
         self.l,self.sl=length,sig_length
         self.w,self.sw=width,sig_width
         self.strike,self.sstrike=strike,sig_strike
@@ -101,8 +101,8 @@ class patch:
         return result.results_list[0][0].result
 
 class segment:
-    def __init__(self,name,ss,ds,x1,x2,x3,length,width,strike,dip,
-        sig_ss,sig_ds,sig_x1,sig_x2,sig_x3,sig_length,sig_width,sig_strike,sig_dip,
+    def __init__(self,name,ss,ds,east,north,down,length,width,strike,dip,
+        sig_ss,sig_ds,sig_east,sig_north,sig_down,sig_length,sig_width,sig_strike,sig_dip,
         prior_dist,connectivity=False,conservation=False):
         
         self.Mseg = 1
@@ -112,8 +112,8 @@ class segment:
         self.segments=[]
 
         # if self.conservation==False and self.connectivity==False:
-        src = patch(name,ss,ds,x1,x2,x3,length,width,strike,dip,
-            sig_ss,sig_ds,sig_x1,sig_x2,sig_x3,sig_length,sig_width,sig_strike,sig_dip)          
+        src = patch(name,ss,ds,east,north,down,length,width,strike,dip,
+            sig_ss,sig_ds,sig_east,sig_north,sig_down,sig_length,sig_width,sig_strike,sig_dip)          
 
         self.segments.append(src)
         # print src.ss

@@ -285,7 +285,6 @@ class inversion:
         # print
         self.faults = np.array(flatten(self.faults))
 
-
         # initialize m
         self.m = np.copy(self.minit)
         self.M = len(self.m)
@@ -306,7 +305,11 @@ class inversion:
             mpp = as_strided(theta[self.Msurface:])
             m = np.concatenate([mp,mpp])
 
+            # print m
+            # sys.exit()
             g[start:start+manifold.N]=manifold.g(self,m)
+            # print manifold.g(self,m)
+            # print
             
             start+=manifold.N
             M += index
@@ -321,6 +324,8 @@ class inversion:
             mpp = as_strided(theta[self.Msurface:])
 
             m = np.concatenate([mp,mpp])
+            # print m
+            # print 
 
             g[start:start+manifold.N]=manifold.g(self,m)
             
@@ -498,6 +503,7 @@ class inversion:
 
                     for j in xrange((manifold.dim)):
                         ax1 = fig.add_subplot(3,manifold.dim,j+1)
+                        ymin,ymax= np.min(point.d)-0.005, np.max(point.d)+0.005
 
                         lig = ax1.plot(point.t,point.d[j],'.',label='{} {}'.format(point.name, manifold.plot[j]))
                         # ax1.errorbar(point.t,point.d[j],yerr=point.sigmad[j],label=manifold.plot[j],color=lig[0].get_color())
@@ -508,6 +514,7 @@ class inversion:
                         # ax1.set_xlabel('Time')
                         ax1.grid(True)
                         ax1.set_xlim([point.tmin,point.tmax])
+                        ax1.set_ylim([ymin,ymax])
                         locs,labels = plt.xticks()
                         ax1.set_xticks(locs, map(lambda x: "%g" %x, locs))
                         ax1.set_autoscalex_on(False)
@@ -547,18 +554,21 @@ class inversion:
     def plot_InSAR_maps(self):
         for n in xrange(self.Nstacks):
             manifold = self.stacks[n]
+            # print manifold.network
 
             if manifold.type=='InSAR':
                 fig, _ = plt.subplots(1,3,figsize=(12,4))
 
                 vranges = [(manifold.gm[1::2].max(),
                     manifold.gm[1::2].min())]
+                # print manifold.gm[1::2]
+                # print vranges
 
-                lmax = np.abs([np.min(vranges), np.max(vranges)]).max()
+                lmax = np.around(np.abs([np.min(vranges), np.max(vranges)]).max(),decimals=1)
                 levels = np.linspace(-lmax, lmax, 50)
 
                 ax = fig.axes[0]
-                cmap = ax.tricontourf(manifold.x, manifold.y, manifold.d[1::2],
+                cmap = ax.tricontourf(manifold.x, manifold.y, manifold.d[1::2]-manifold.d[0::2],
                                 cmap='seismic', levels=levels)
 
                 plotgmt(self.gmtfiles, ax)
@@ -567,7 +577,7 @@ class inversion:
                     ax.set_xlim(self.bnds[0],self.bnds[1])
                     ax.set_ylim(self.bnds[2],self.bnds[3])
 
-                ax.set_title('Data: {}'.format(manifold.reduction))
+                ax.set_title('Data: {}'.format(manifold.network))
                 ax.set_aspect('equal')
                 ax.set_xlabel('[km]')
                 ax.set_ylabel('[km]')
@@ -584,7 +594,7 @@ class inversion:
 
 
                 ax = fig.axes[1]
-                cmap = ax.tricontourf(manifold.x, manifold.y, manifold.gm[1::2],
+                cmap = ax.tricontourf(manifold.x, manifold.y, manifold.gm[1::2]-manifold.gm[0::2],
                                 cmap='seismic', levels=levels)
 
                 ax.set_title('Model')

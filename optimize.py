@@ -118,17 +118,18 @@ m_init = inv.build_prior()
 
 ### TESTING ###
 inv.build_gm(m_init)
+# sys.exit()
 inv.residual(m_init)
 # inv.foward(inv.priors)
 # print inv.residualscalar(m_init)
 # print inv.jacobianscalar(m_init)
 # sys.exit()
 
-# # # plots
-# inv.plot_ts_GPS()
-# inv.plot_InSAR_maps()
-# plt.show()
-# sys.exit()
+# # plots
+inv.plot_ts_GPS()
+inv.plot_InSAR_maps()
+plt.show()
+sys.exit()
 
 
 print
@@ -238,7 +239,7 @@ inv.plot_ts_GPS()
 inv.plot_InSAR_maps()
 if bayesian:
   for i in xrange(len(inv.faults)):
-    pymc.Matplot.plot(model.trace(inv.faults[i][:]),format = 'eps',,path = outstat)
+    pymc.Matplot.plot(model.trace(inv.faults[i][:]),format = 'eps',path = outstat)
 plt.show()
 
 

@@ -84,12 +84,45 @@ def mw2slip(mw,l,W):
     # print 'slip:{}'.format(slip)
     return slip
 
+# 2008 event
+# GCMT: lon=95.75, lat=37.51, Depth:27.2km, strike=108, dip:67, rake:106, mw=6.3
+# [Elliott 2011]: Depth:16.4km, strike=99, dip:58, rake:95, length=15km, width=12km, mw=6.3
+# [Feng 2015]:  Depth:15km, strike=288, dip:31, rake:90, length=17km, width=8km, mw=6.3
+#               Depth:16km, strike=108, dip:53, rake:117, length=17km, width=5km, mw=6.3
+
+# # north
+east,north=-13, -10
+d = 15.
+strike=288
+dip=31.
+rake = 90 
+l = 17.
+W=8.
+mw=6.3
+slip08 = mw2slip(mw,l,W)
+
+co2008 = RectangularSource(
+    north_shift=north*km, east_shift=east*km,
+    depth=d*km, width=W*km, length=l*km,
+    dip=dip, rake=rake, strike=strike,
+    slip=slip08)
+
+print
+print 'Synthetic model:'
+print co2008
+
+patches = [co2008];
+sources = CombiSource(subsources=patches)
+# The computation is performed by calling process on the engine
+result_2008 = engine.process(sources, [satellite_target])
+
+
 # 2009 event
 # GCMT: lon=95.76, lat=37.64, Depth:12km, strike=101, dip:60, rake:83, mw=6.3
 # [Elliott 2011]: Depth:4.7km, strike=100, dip:53, rake:106, length=12.2km, width=5.4km, mw=6.3
 # [Feng 2015]:  Depth:5km, strike=108, dip:53, rake:90, length=xkm, width=xkm, mw=6.3
 
-y,x=-12.5,4
+east,north=-12.5,4
 d = 5.
 strike=108
 dip=53.
@@ -97,30 +130,32 @@ rake = 90
 l = 12.
 W=5.5
 mw=6.3
-slip = mw2slip(mw,l,W)
+slip09 = mw2slip(mw,l,W)
 
-coseis = RectangularSource(
-    north_shift=x*km, east_shift=y*km,
+co2009 = RectangularSource(
+    north_shift=north*km, east_shift=east*km,
     depth=d*km, width=W*km, length=l*km,
     dip=dip, rake=rake, strike=strike,
-    slip=slip)
+    slip=slip09)
 
 print
 print 'Synthetic model:'
-print coseis
+print co2009
 
-patches = [coseis];
+patches = [co2009];
 sources = CombiSource(subsources=patches)
-
 # The computation is performed by calling process on the engine
-result = engine.process(sources, [satellite_target])
+result_2009 = engine.process(sources, [satellite_target])
+
+
 
 ##############################################
 #       Create synthetic time series         #
 ##############################################
 
 # convert some dates to decimal time
-dates = [20090828, 20090708, 20091021]
+# [Eq1, Eq2, Int1_date1, Int1_date2, Int2_date1, Int2_date2]
+dates = [20081110, 20090828, 20080827, 20081210 ,20090708, 20091021]
 # dates = [20090828, 20080110, 20100421]
 times = date2dec(dates)
 # print times
@@ -128,55 +163,64 @@ times = date2dec(dates)
 
 # define time for synthetic time series 
 t0 = 2005.
-t = t0+num.arange(0,8,.2)
-# t = t0+num.arange(0,8,0.01)
+# t = t0+num.arange(0,8,1.)
+t = t0+num.arange(0,8,0.01)
 
 # define time interferometric acquisitions
-tint =  times[2] - times[1]
+tint1 =  times[3] - times[2]
+tint2 =  times[5] - times[4]
 
 # define coseismic time
-tco = times[0]
-
-# def Heaviside(t):
-#         h=np.zeros((len(t)))
-#         h[t>=0]=1.0
-#         return h
-
-# extract pyrocko result
-N = result.request.targets[0].coords5[:, 2]/1000
-E = result.request.targets[0].coords5[:, 3]/1000
-result = result.results_list[0][0].result
-components = result.keys()
+t08 = times[0]
+t09 = times[1]
 
 # surface displacement matrix (BIL format)
-disp = np.zeros((Ninsar+len(t)*Ngps,4))
+disp = np.zeros((2*Ninsar+len(t)*Ngps,4))
+
+# extract pyrocko results 
+N = result_2009.request.targets[0].coords5[:, 2]/1000
+E = result_2009.request.targets[0].coords5[:, 3]/1000
+result_2009 = result_2009.results_list[0][0].result
+components = result_2009.keys()
+
+# idem for 2008 event
+result_2008 = result_2008.results_list[0][0].result
 
 # create fake interseismic surface displacements 
-vint = 0.004
-disp[:Ninsar,0] = vint*tint 
+# vint = 0.004
+# ie.e TS clean form interseismic trend
+vint = 0.0
+disp[:Ninsar,0] = vint*tint1
+disp[Ninsar:2*Ninsar,0] = vint*tint2 
 
 for i in xrange(Ngps):
-    d = as_strided(disp[Ninsar+i*len(t):Ninsar+(i+1)*len(t),:])
+    d = as_strided(disp[2*Ninsar+i*len(t):2*Ninsar+(i+1)*len(t),:])
     # Heaviside function define in kernel.py
     d[:,0] = vint*(t-t0)*Heaviside(t-t0) # los component
     d[:,1] = vint*(t-t0)*Heaviside(t-t0) # east component
     d[:,2] = vint*(t-t0)*Heaviside(t-t0) # down component
     d[:,3] = vint*(t-t0)*Heaviside(t-t0) # north component
 
-# add coseismic surface displacements compute from engine
-# print result['displacement.los'][:Ninsar]
-# print
-disp[:Ninsar,0] -= result['displacement.los'][:Ninsar] 
+# Add coseismic surface displacements compute from engine
+# for the two interferograms
+disp[:Ninsar,0] += result_2008['displacement.los'][:Ninsar] 
+disp[Ninsar:2*Ninsar,0] += result_2009['displacement.los'][:Ninsar] 
+
+# for the GPS times series
 for i in xrange(Ngps):
-    d = as_strided(disp[Ninsar+i*len(t):Ninsar+(i+1)*len(t),:])
-    d[:,0] -= result['displacement.los'][Ninsar+i]*Heaviside(t-tco)
-    d[:,1] -= result['displacement.e'][Ninsar+i]*Heaviside(t-tco)
-    d[:,2] -= result['displacement.d'][Ninsar+i]*Heaviside(t-tco)
-    d[:,3] -= result['displacement.n'][Ninsar+i]*Heaviside(t-tco)
+    d = as_strided(disp[2*Ninsar+i*len(t):2*Ninsar+(i+1)*len(t),:])
+    d[:,0] +=  (result_2009['displacement.los'][Ninsar+i]*Heaviside(t-t09) + result_2008['displacement.los'][Ninsar+i]*Heaviside(t-t08) )
+    d[:,1] +=  (result_2009['displacement.e'][Ninsar+i]*Heaviside(t-t09) + result_2008['displacement.e'][Ninsar+i]*Heaviside(t-t08) )
+    d[:,2] +=  (result_2009['displacement.d'][Ninsar+i]*Heaviside(t-t09) + result_2008['displacement.d'][Ninsar+i]*Heaviside(t-t08) )
+    d[:,3] +=  (result_2009['displacement.n'][Ninsar+i]*Heaviside(t-t09) + result_2008['displacement.n'][Ninsar+i]*Heaviside(t-t08) )
+
+# print result_2008['displacement.d'][Ninsar]*Heaviside(t-t08)
+# print result_2009['displacement.d'][Ninsar]*Heaviside(t-t09)
+# sys.exit()
 
 # vpost = 0.001
 # # add postseismic signal (define in kernel.py)
-# post = postseismic(tini = tco, tend= tco+1., Mfunc=1)
+# post = postseismic(tini = t09, tend= t09+1., Mfunc=1)
 # post = flatten(post)
 # for k in xrange(len(post)):
 #     disp[:Ninsar,0] -= vpost*post[k].g(times[2])
@@ -194,7 +238,6 @@ for i in xrange(Ngps):
 # Synthetic sismograms
 
 
-
 # Add random noise
 print 'Add random noise to synthetic data'
 sig_insar = 0.005 
@@ -205,18 +248,18 @@ print
 rseed = 231
 # randow value that produce the same value for same seeds
 rstate = num.random.RandomState(rseed)
-xr = num.zeros((Ninsar+len(t)*Ngps, 4))
+xr = num.zeros((2*Ninsar+len(t)*Ngps, 4))
 # print np.max(result['displacement.los'][:Ninsar]), np.min(result['displacement.los'][:Ninsar])
-xr[:, 0] = rstate.uniform(-sig_insar, sig_insar, size=Ninsar+len(t)*Ngps) # los component
-xr[:, 1] = rstate.uniform(-sig_gps, sig_gps, size=Ninsar+len(t)*Ngps) # east component
-xr[:, 2] = rstate.uniform(-sig_gps, sig_gps, size=Ninsar+len(t)*Ngps) # down component
-xr[:, 3] = rstate.uniform(-sig_gps, sig_gps, size=Ninsar+len(t)*Ngps) # north component
+xr[:, 0] = rstate.uniform(-sig_insar, sig_insar, size=2*Ninsar+len(t)*Ngps) # los component
+xr[:, 1] = rstate.uniform(-sig_gps, sig_gps, size=2*Ninsar+len(t)*Ngps) # east component
+xr[:, 2] = rstate.uniform(-sig_gps, sig_gps, size=2*Ninsar+len(t)*Ngps) # down component
+xr[:, 3] = rstate.uniform(-sig_gps, sig_gps, size=2*Ninsar+len(t)*Ngps) # north component
 disp += xr
 
 # fig, _ = plt.subplots(4,1,figsize=(18,6))
 # # plot first GPS station surface displacements
 # for i, ax, dspl in zip(np.arange(4),fig.axes,components):
-#     ax.plot(t,disp[Ninsar+len(t)*0:Ninsar+len(t)*1,i])
+#     ax.plot(t,disp[2*Ninsar+len(t)*0:2*Ninsar+len(t)*1,i])
 #     ax.set_ylabel(dspl+' [m]')
 #     ax.set_xlabel('Time')
 #     fig.autofmt_xdate()
@@ -228,12 +271,19 @@ disp += xr
 #            Save Foward model               #
 ##############################################
 
-# #### Uncomment to create new data files ######
+#### Uncomment to create new data files ######
 
-# # save insar stack
-# fid = open('./synthetic_example/insar/int_20081008-20081114.xylos','w')
+# # # save interferograms
+# fid = open('./synthetic_example/insar/int_{}-{}.xylos'.format(dates[2],dates[3]),'w')
 # # print np.vstack([E[:Ninsar], N[:Ninsar], disp[:Ninsar,0]]).T
 # np.savetxt(fid, np.vstack([E[:Ninsar], N[:Ninsar], disp[:Ninsar,0]]).T ,header = 'x(km)     y(km)    los(m/yr)  ',comments = '# ')
+# fid.write('\n')
+# fid.close
+
+# fid = open('./synthetic_example/insar/int_{}-{}.xylos'.format(dates[4],dates[5]),'w')
+# # print 
+# # print np.vstack([E[:Ninsar], N[:Ninsar], disp[Ninsar:2*Ninsar,0]]).T
+# np.savetxt(fid, np.vstack([E[:Ninsar], N[:Ninsar], disp[Ninsar:2*Ninsar,0]]).T ,header = 'x(km)     y(km)    los(m/yr)  ',comments = '# ')
 # fid.write('\n')
 # fid.close
 
@@ -247,8 +297,9 @@ disp += xr
 
 # # save gps time series
 # for i in xrange(Ngps):
-#     fid = open('./synthetic_example/gps/SYNT/'+stations_name[i]+'.neu','w')
-#     d = as_strided(disp[Ninsar+i*len(t):Ninsar+(i+1)*len(t),:])
+#     # fid = open('./synthetic_example/gps/SYNT/'+stations_name[i]+'.neu','w')
+#     fid = open('./synthetic_example/gps/SYNT-DENSE/'+stations_name[i]+'.neu','w')
+#     d = as_strided(disp[2*Ninsar+i*len(t):2*Ninsar+(i+1)*len(t),:])
 #     for ii in xrange(len(t)):
 #         np.savetxt(fid, np.vstack([t[ii], d[ii,1], d[ii,3], d[ii,2], 0.001, 0.001, 0.005]).T)
 #     fid.write('\n')
@@ -277,13 +328,25 @@ coseismic(
     name='2008 event',
     structures=[
         segment(
-            # name='zongwulong',ss=0.,ds=slip,x1=4,x2=-12.5,x3=5.,length=12.,width=5.5,strike=108,dip=53,
-            # sig_ss=0.,sig_ds=0.,sig_x1=0,sig_x2=0,sig_x3=0,sig_length=0.,sig_width=0.,sig_strike=0,sig_dip=0.,
-            name='zongwulong',ss=0.,ds=1,x1=4,x2=-12.5,x3=5.,length=10.,width=5.,strike=108,dip=53.,
-            sig_ss=0.,sig_ds=1.,sig_x1=0,sig_x2=0,sig_x3=0,sig_length=5.,sig_width=3.,sig_strike=0,sig_dip=0.,
+            name='xitieshan',ss=0.,ds=slip08,east=-13,north=-10,down=15.,length=17.,width=8.,strike=288,dip=31.,
+            sig_ss=0.,sig_ds=0.,sig_east=0,sig_north=0,sig_down=0,sig_length=0.,sig_width=0.,sig_strike=0,sig_dip=0.,
             prior_dist='Unif',connectivity=False,conservation=False,
             )],
-    date=tco,
+    date=t08,
+    sigmam=1.0,
+    ),
+
+coseismic(
+    name='2009 event',
+    structures=[
+        segment(
+            name='zongwulong',ss=0.,ds=slip09,east=-12.5,north=4,down=5.,length=12.,width=5.5,strike=108,dip=53,
+            sig_ss=0.,sig_ds=0.,sig_east=0,sig_north=0,sig_down=0,sig_length=0.,sig_width=0.,sig_strike=0,sig_dip=0.,
+            # name='zongwulong',ss=0.,ds=1,x1=4,x2=-12.5,x3=5.,length=10.,width=5.,strike=108,dip=53.,
+            # sig_ss=0.,sig_ds=1.,sig_x1=0,sig_x2=0,sig_x3=0,sig_length=5.,sig_width=3.,sig_strike=0,sig_dip=0.,
+            prior_dist='Unif',connectivity=False,conservation=False,
+            )],
+    date=t09,
     sigmam=1.0,
     )
     ]
@@ -291,10 +354,10 @@ coseismic(
 # Define Temporal functions
 # Dictionary of available functions: coseismic(), interseismic(), postseismic, seasonal(), ref()
 basis=[
-# coseismic(name='coseismic', date=t0, m=0., sigmam=0.1),
-interseismic(name='interseismic', date=t0, m=0, sigmam=0.01),
+# coseismic(name='coseismic', date=t08, m=0., sigmam=0.1),
+# interseismic(name='interseismic', date=t0, m=0, sigmam=0.01),
 # interseismic(name='interseismic', date=t0, m=vint, sigmam=0., prior_dist='Unif'),
-# postseismic(tini = tco, tend= tco+1., Mfunc=1, m=vpost, sigmam=0)
+# postseismic(tini = t09, tend= t09+1., Mfunc=1, m=vpost, sigmam=0)
 ]  
 
 
@@ -304,10 +367,10 @@ interseismic(name='interseismic', date=t0, m=0, sigmam=0.01),
 # Define timeseries data set: time series will be clean temporally from basis functions
 timeseries=[
     gpstimeseries(
-        # network='synt_gps_km_short.txt',
+        network='synt_gps_km_short.txt',
         # reduction='SYNT', 
-        network='synt_gps_km.txt',
-        reduction='SYNT', # directory where are the time series
+        # network='synt_gps_km.txt',
+        reduction='SYNT-DENSE', # directory where are the time series
         dim=3, # [East, North, Down]: dim=3, [East, North]: dim =2
         wdir=maindir+'gps/',
         scale=1., # scale all values
@@ -322,9 +385,14 @@ timeseries=[
 # Define stack data set: velcoity maps, average displacements GPS vectors, interferograms, ect...
 # Cannot be clean from temporal basis functions
 stacks=[
-    insarstack(network='int_20081008-20081114.xylos',
+    insarstack(network='int_{}-{}.xylos'.format(dates[2],dates[3]),
             reduction='Int.',wdir=maindir+'insar/',proj=projm,
-            tmin= times[1], tmax=times[2], los=None,heading=None,
+            tmin= times[2], tmax=times[3], los=None,heading=None,
+            weight=1./sig_insar,scale=1.,base=[0,0,0],sig_base=[0,0,0],dist='Unif'),
+
+    insarstack(network='int_{}-{}.xylos'.format(dates[4],dates[5]),
+            reduction='Int.',wdir=maindir+'insar/',proj=projm,
+            tmin= times[4], tmax=times[5], los=None,heading=None,
             weight=1./sig_insar,scale=1.,base=[0,0,0],sig_base=[0,0,0],dist='Unif'),
     ]
 
@@ -333,7 +401,7 @@ short_optim = False # if True: fast optimization with scipy
 bayesian = True # if True: bayesian exploration with Metropolis sampling
 MAP = False # if True: display maximum posteriori values using functions in Scipy's optimize
 niter=1000 # number of sampling for bayesian exploration
-nburn=500 # number of burned sampling  
+nburn=500 # number of burned sampled 
 
 
 # Define profile for plot?

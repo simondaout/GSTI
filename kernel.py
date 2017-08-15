@@ -50,9 +50,9 @@ class coseismic(pattern):
         def g(self,t):
           # print self.t0
           # print t
-          # print self.m*(Heaviside(t-self.t0))/self.sigmam 
-          # print t
-          return -Heaviside(t-self.t0)
+          # print Heaviside(t-self.t0)
+          # sys.exit()
+          return Heaviside(t-self.t0)
 
 def postseismic(tini,tend,Mfunc,structures=[],name='',inversion_type='time',m=1.,sigmam=0.,prior_dist='Unif'):
 

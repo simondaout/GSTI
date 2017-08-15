@@ -148,6 +148,8 @@ class insarstack:
         print 'Number of points:', self.Npoints
         print 'phi: {}, theta: {}'.format(np.rad2deg(self.phim),np.rad2deg(self.thetam))
         print '[East, North, Down] vector :', self.projm
+        # print self.d[:20]
+        # sys.exit()
         print
 
 
@@ -164,7 +166,7 @@ class insarstack:
 
         satellite_targets = SatelliteTarget(
             # distance in meters
-            # These changes of units is shit !
+            # These changes of units are shit !
             north_shifts = self.y*1000.,
             east_shifts =  self.x*1000.,
             interpolation='nearest_neighbor',
@@ -188,13 +190,15 @@ class insarstack:
 
         #     self.gm += mpp*inv.basis[k].g(self.t)
 
+        start = 0
         for k in xrange(len(inv.kernels)):
             kernel = inv.kernels[k]
+            # print kernel.name
             # mp = as_strided(m[self.Mbase+inv.Mbasis*self.Npoints:])
             mp = as_strided(m[self.Mbase:])
             for j in xrange(kernel.Mseg):
                 seg =  kernel.segments[j]
-                mpp = as_strided(mp[j*seg.Mpatch:(j+1)*seg.Mpatch])
+                mpp = as_strided(mp[start:start+seg.Mpatch])
 
                 # update patch parameter
                 seg.ss,seg.ds,seg.x1,seg.x2,seg.x3,seg.l,seg.w,seg.strike,seg.dip = mpp
@@ -203,10 +207,20 @@ class insarstack:
                 disp = seg.engine(satellite_targets, inv.store, inv.store_path)['displacement.los']
                 # print disp
 
-                gt = np.zeros((self.N))
-                gt[1::2] = disp
+                # gt = np.zeros((self.N))
+                gt = np.repeat(disp,2)
+                # print gt
 
                 self.gm += inv.kernels[k].g(self.t)*gt
+                # print self.t
+                # print inv.kernels[k].g(self.t)
+                # print self.gm
+                # print
+                start += seg.Mpatch 
+
+                # print self.t
+                # print inv.kernels[k].g(self.t)
+        # sys.exit()
 
         return self.gm
 
