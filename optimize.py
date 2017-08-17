@@ -140,6 +140,7 @@ print 'Optmized parameters:'
 bnd=column_stack((inv.mmin,inv.mmax))
 for i in xrange(len(bnd)): 
   print 'bounds for parameter {}: {}'.format(inv.sampled[i],bnd[i])
+print
 
 if short_optim:
 
@@ -147,8 +148,7 @@ if short_optim:
   # res = opt.minimize(inv.residualscalar,inv.priors,method='SLSQP',bounds=bnd)
   # res = opt.minimize(inv.residualscalar,inv.priors,method='L-BFGS-B',bounds=bnd)
   # res = opt.fmin_slsqp(inv.residualscalar,inv.priors,bounds=bnd)
-  res = opt.differential_evolution(inv.residualscalar, bounds=bnd,maxiter=niter,\
-     polish=False,disp=True)
+  res = opt.differential_evolution(inv.residualscalar, bounds=bnd,maxiter=niter,polish=False,disp=True)
   
   elapsed = time.time() - t
   print

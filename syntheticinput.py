@@ -401,10 +401,10 @@ coseismic(
     name='2008 event',
     structures=[
         segment(
-            # name='xitieshan',ss=0.,ds=slip08,east=-13,north=-10,down=15.,length=17.,width=8.,strike=288,dip=31.,
-            # sig_ss=0.,sig_ds=0.,sig_east=0,sig_north=0,sig_down=0,sig_length=0.,sig_width=0.,sig_strike=0,sig_dip=0.,
-            name='xitieshan',ss=1.,ds=1.,east=-13,north=-10.,down=15.,length=17.,width=8.,strike=288,dip=31.,
-            sig_ss=0.,sig_ds=1.,sig_east=0,sig_north=0,sig_down=0,sig_length=0.,sig_width=0.,sig_strike=0,sig_dip=0.,
+            name='xitieshan',ss=0.,ds=slip08,east=-13,north=-10,down=15.,length=17.,width=8.,strike=288,dip=31.,
+            sig_ss=0.,sig_ds=0.,sig_east=0,sig_north=0,sig_down=0,sig_length=0.,sig_width=0.,sig_strike=0,sig_dip=0.,
+            # name='xitieshan',ss=0.,ds=1.,east=-13,north=-10.,down=15.,length=17.,width=8.,strike=288,dip=31.,
+            # sig_ss=0.,sig_ds=1.,sig_east=0,sig_north=0,sig_down=0,sig_length=0.,sig_width=0.,sig_strike=0,sig_dip=0.,
             prior_dist='Unif',connectivity=False,conservation=False,
             )],
     date=t08,
@@ -463,8 +463,8 @@ stacks=[
     insarstack(network='int_{}-{}.xylos'.format(dates[2],dates[3]),
             reduction='Int.1',wdir=maindir+'insar/',proj=projm,
             tmin= times[2], tmax=times[3], los=None,heading=None,
-            weight=1./sig_insar,scale=1.,base=[ramp1_b, ramp1_a, ramp1_c],sig_base=[0.,0.,0.],dist='Unif'),
-            # weight=1./sig_insar,scale=1.,base=[0., 0., 0.],sig_base=[0.001,0.001,0.001],dist='Unif'),
+            # weight=1./sig_insar,scale=1.,base=[ramp1_b, ramp1_a, ramp1_c],sig_base=[0.,0.,0.],dist='Unif'),
+            weight=1./sig_insar,scale=1.,base=[0., 0., 0.],sig_base=[0.001,0.001,0.001],dist='Unif'),
 
     insarstack(network='int_{}-{}.xylos'.format(dates[4],dates[5]),
             reduction='Int.2',wdir=maindir+'insar/',proj=projm,
@@ -474,8 +474,8 @@ stacks=[
     ]
 
 # Optimisation
-short_optim = False # if True: fast optimization with scipy
-bayesian = True # if True: bayesian exploration with Metropolis sampling
+short_optim = True # if True: fast optimization with scipy
+bayesian = False # if True: bayesian exploration with Metropolis sampling
 MAP = False # if True: display maximum posteriori values using functions in Scipy's optimize
 niter=2000 # number of sampling for exploration
 nburn=500 # number of burned sampled 
