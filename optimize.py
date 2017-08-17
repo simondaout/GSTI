@@ -104,7 +104,6 @@ bounds=bounds,
 inv.d = inv.build_data()
 # sys.exit()
 
-
 #load kernels and build priors
 print inv.info()
 for i in xrange(inv.Mker):
@@ -115,21 +114,16 @@ for i in xrange(inv.Mker):
 # build prior model
 m_init = inv.build_prior()
 
-
 ### TESTING ###
-inv.build_gm(m_init)
-# sys.exit()
-inv.residual(m_init)
-# inv.foward(inv.priors)
-# print inv.residualscalar(m_init)
-# print inv.jacobianscalar(m_init)
+inv.build_gm()
+inv.residual()
 # sys.exit()
 
-# plots
-inv.plot_ts_GPS()
-inv.plot_InSAR_maps()
-plt.show()
-sys.exit()
+# # plots
+# inv.plot_ts_GPS()
+# inv.plot_InSAR_maps()
+# plt.show()
+# sys.exit()
 
 
 print
@@ -142,19 +136,19 @@ print 'Lenght of the data vector:', len(inv.d)
 print 'Number of Free parameters:', len(inv.priors)
 print
 
+print 'Optmized parameters:'
+bnd=column_stack((inv.mmin,inv.mmax))
+for i in xrange(len(bnd)): 
+  print 'bounds for parameter {}: {}'.format(inv.sampled[i],bnd[i])
+
 if short_optim:
 
   t = time.time() 
-  # print inv.mmin
-  bnd=column_stack((inv.mmin,inv.mmax))
-  for i in xrange(len(bnd)): 
-    print 'bounds for parameter {}: {}'.format(inv.sampled[i],bnd[i])
-
   # res = opt.minimize(inv.residualscalar,inv.priors,method='SLSQP',bounds=bnd)
   # res = opt.minimize(inv.residualscalar,inv.priors,method='L-BFGS-B',bounds=bnd)
   # res = opt.fmin_slsqp(inv.residualscalar,inv.priors,bounds=bnd)
-  # res = opt.differential_evolution(inv.residualscalar, bounds=bnd,maxiter=5000,\
-  #   polish=False,disp=True)
+  res = opt.differential_evolution(inv.residualscalar, bounds=bnd,maxiter=niter,\
+     polish=False,disp=True)
   
   elapsed = time.time() - t
   print
@@ -177,8 +171,9 @@ if bayesian:
   observed = True,
   ) 
 
+  
   # Parameters = locals()
-  Parameters = pymc.Model( inv.priors )
+  Parameters = pymc.Model(inv.priors)
   model = pymc.MCMC(Parameters)
 
   if MAP:
@@ -231,7 +226,11 @@ print "-------------------------------------------------------------------------
 print
 
 # compute residual for plots
-inv.residual(m_init)
+inv.residual()
+
+for i in xrange(inv.Nmanif):
+    inv.manifolds[i].printbase()
+print
 
 for i in xrange(inv.Mker):
     for j in xrange(inv.kernels[i].Mseg):

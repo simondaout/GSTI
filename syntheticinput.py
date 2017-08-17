@@ -23,8 +23,6 @@ from pyrocko.gf import LocalEngine, StaticTarget, SatelliteTarget,\
 store='halfspace'
 store_path=['./']
 
-plotdata = False # if True: plot synthetic data before optimisation
-
 #####################################################
 ############ CREATE SYNTHETIC EXAMPLE ###############
 #####################################################
@@ -261,12 +259,18 @@ disp += xr
 
 
 # Add orbital ramp to the interferograms
-ramp_a,ramp_b,ramp_c = -0.0008, 0.0004, 0.0
-print 'Add synthetic ramp: {}*y + {}*x + {})'.format(ramp_a,ramp_b,ramp_c)
-ramp = ramp_a*N[:Ninsar] + ramp_b*E[:Ninsar] + ramp_c
-disp[:Ninsar,0] = disp[:Ninsar,0]+ramp
-disp[Ninsar:2*Ninsar,0] = disp[Ninsar:2*Ninsar,0]+ramp
+ramp1_a,ramp1_b,ramp1_c = -0.0008, 0.0004, 0.0
+print 'Add synthetic ramp: {}*y + {}*x + {})'.format(ramp1_a,ramp1_b,ramp1_c)
+ramp1 = ramp1_a*N[:Ninsar] + ramp1_b*E[:Ninsar] + ramp1_c
+disp[:Ninsar,0] = disp[:Ninsar,0]+ramp1
 
+ramp2_a,ramp2_b,ramp2_c = -0.008, 0.0004, 0.0
+ramp2 = ramp2_a*N[:Ninsar] + ramp2_b*E[:Ninsar] + ramp2_c
+print 'Add synthetic ramp: {}*y + {}*x + {})'.format(ramp2_a,ramp2_b,ramp2_c)
+disp[Ninsar:2*Ninsar,0] = disp[Ninsar:2*Ninsar,0]+ramp2
+print 
+
+plotdata = False # if True: plot synthetic data before optimisation
 if plotdata==True:
 
     fig, _ = plt.subplots(2,2,figsize=(14,8))
@@ -275,7 +279,7 @@ if plotdata==True:
     levels = np.linspace(-lmax, lmax, 50)
 
     ax = fig.axes[0]
-    cmap = ax.tricontourf(E[:Ninsar], N[:Ninsar],disp[:Ninsar,0]-ramp,
+    cmap = ax.tricontourf(E[:Ninsar], N[:Ninsar],disp[:Ninsar,0]-ramp1,
                                     cmap='seismic', levels=levels)
 
     ax.set_title('{}-{}'.format(dates[2],dates[3]))
@@ -295,7 +299,7 @@ if plotdata==True:
     fig.colorbar(cmap, ax=ax, aspect=5)
 
     ax = fig.axes[2]
-    cmap = ax.tricontourf(E[:Ninsar], N[:Ninsar],disp[Ninsar:2*Ninsar,0]-ramp,
+    cmap = ax.tricontourf(E[:Ninsar], N[:Ninsar],disp[Ninsar:2*Ninsar,0]-ramp2,
                                     cmap='seismic', levels=levels)
 
     ax.set_title('{}-{}'.format(dates[4],dates[5]))
@@ -338,39 +342,43 @@ if plotdata==True:
 
 #### Uncomment to create new data files ######
 
-# # # save interferograms
-# fid = open('./synthetic_example/insar/int_{}-{}.xylos'.format(dates[2],dates[3]),'w')
-# # print np.vstack([E[:Ninsar], N[:Ninsar], disp[:Ninsar,0]]).T
-# np.savetxt(fid, np.vstack([E[:Ninsar], N[:Ninsar], disp[:Ninsar,0]]).T ,header = 'x(km)     y(km)    los(m/yr)  ',comments = '# ')
-# fid.write('\n')
-# fid.close
+# # save interferograms
+savedata = False # if True: save synthetic data
 
-# fid = open('./synthetic_example/insar/int_{}-{}.xylos'.format(dates[4],dates[5]),'w')
-# # print 
-# # print np.vstack([E[:Ninsar], N[:Ninsar], disp[Ninsar:2*Ninsar,0]]).T
-# np.savetxt(fid, np.vstack([E[:Ninsar], N[:Ninsar], disp[Ninsar:2*Ninsar,0]]).T ,header = 'x(km)     y(km)    los(m/yr)  ',comments = '# ')
-# fid.write('\n')
-# fid.close
+if savedata==True:
+
+    fid = open('./synthetic_example/insar/int_{}-{}.xylos'.format(dates[2],dates[3]),'w')
+    # print np.vstack([E[:Ninsar], N[:Ninsar], disp[:Ninsar,0]]).T
+    np.savetxt(fid, np.vstack([E[:Ninsar], N[:Ninsar], disp[:Ninsar,0]]).T ,header = 'x(km)     y(km)    los(m/yr)  ',comments = '# ')
+    fid.write('\n')
+    fid.close
+
+    fid = open('./synthetic_example/insar/int_{}-{}.xylos'.format(dates[4],dates[5]),'w')
+    # print 
+    # print np.vstack([E[:Ninsar], N[:Ninsar], disp[Ninsar:2*Ninsar,0]]).T
+    np.savetxt(fid, np.vstack([E[:Ninsar], N[:Ninsar], disp[Ninsar:2*Ninsar,0]]).T ,header = 'x(km)     y(km)    los(m/yr)  ',comments = '# ')
+    fid.write('\n')
+    fid.close
 
 
-# # save gps stations locations
-# # fid = open('./synthetic_example/gps/synt_gps_km.txt','w')
-# # print stations_name, np.vstack([stations_east, stations_north]).T
-# # np.savetxt(fid, stations_name, np.vstack([stations_east, stations_north]).T ,header = ' name  x(km)  y(km) ',comments = '# ')
-# # fid.write('\n')
-# # fid.close
+    # save gps stations locations
+    # fid = open('./synthetic_example/gps/synt_gps_km.txt','w')
+    # print stations_name, np.vstack([stations_east, stations_north]).T
+    # np.savetxt(fid, stations_name, np.vstack([stations_east, stations_north]).T ,header = ' name  x(km)  y(km) ',comments = '# ')
+    # fid.write('\n')
+    # fid.close
 
-# # save gps time series
-# for i in xrange(Ngps):
-#     # fid = open('./synthetic_example/gps/SYNT/'+stations_name[i]+'.neu','w')
-#     fid = open('./synthetic_example/gps/SYNT-DENSE/'+stations_name[i]+'.neu','w')
-#     d = as_strided(disp[2*Ninsar+i*len(t):2*Ninsar+(i+1)*len(t),:])
-#     for ii in xrange(len(t)):
-#         np.savetxt(fid, np.vstack([t[ii], d[ii,1], d[ii,3], d[ii,2], 0.001, 0.001, 0.005]).T)
-#     fid.write('\n')
-#     fid.close
+    # save gps time series
+    for i in xrange(Ngps):
+        # fid = open('./synthetic_example/gps/SYNT/'+stations_name[i]+'.neu','w')
+        fid = open('./synthetic_example/gps/SYNT-DENSE/'+stations_name[i]+'.neu','w')
+        d = as_strided(disp[2*Ninsar+i*len(t):2*Ninsar+(i+1)*len(t),:])
+        for ii in xrange(len(t)):
+            np.savetxt(fid, np.vstack([t[ii], d[ii,1], d[ii,3], d[ii,2], 0.001, 0.001, 0.005]).T)
+        fid.write('\n')
+        fid.close
 
-# sys.exit()
+    sys.exit()
 
 #####################################################
 ############ OPTIMISATION PARAMETERS ################
@@ -389,28 +397,28 @@ outdir=maindir+'output/'
 # Each functions have seral structures as attribute
 # One structure can be made of several segments with connectivity and kinematic conservation properties
 kernels=[
-# coseismic(
-#     name='2008 event',
-#     structures=[
-#         segment(
-#             name='xitieshan',ss=0.,ds=slip08,east=-13,north=-10,down=15.,length=17.,width=8.,strike=288,dip=31.,
-#             sig_ss=0.,sig_ds=0.,sig_east=0,sig_north=0,sig_down=0,sig_length=0.,sig_width=0.,sig_strike=0,sig_dip=0.,
-#             # name='xitieshan',ss=0.,ds=1.,east=-13,north=-10.,down=15.,length=15.,width=10.,strike=288,dip=50.,
-#             # sig_ss=0.,sig_ds=1.,sig_east=0,sig_north=0,sig_down=0,sig_length=10.,sig_width=5.,sig_strike=0,sig_dip=40.,
-#             prior_dist='Unif',connectivity=False,conservation=False,
-#             )],
-#     date=t08,
-#     sigmam=1.0,
-#     ),
+coseismic(
+    name='2008 event',
+    structures=[
+        segment(
+            # name='xitieshan',ss=0.,ds=slip08,east=-13,north=-10,down=15.,length=17.,width=8.,strike=288,dip=31.,
+            # sig_ss=0.,sig_ds=0.,sig_east=0,sig_north=0,sig_down=0,sig_length=0.,sig_width=0.,sig_strike=0,sig_dip=0.,
+            name='xitieshan',ss=1.,ds=1.,east=-13,north=-10.,down=15.,length=17.,width=8.,strike=288,dip=31.,
+            sig_ss=0.,sig_ds=1.,sig_east=0,sig_north=0,sig_down=0,sig_length=0.,sig_width=0.,sig_strike=0,sig_dip=0.,
+            prior_dist='Unif',connectivity=False,conservation=False,
+            )],
+    date=t08,
+    sigmam=1.0,
+    ),
 
 coseismic(
     name='2009 event',
     structures=[
         segment(
-            # name='zongwulong',ss=0.,ds=slip09,east=-12.5,north=4,down=5.,length=12.,width=5.5,strike=108,dip=53,
-            # sig_ss=0.,sig_ds=0.,sig_east=0,sig_north=0,sig_down=0,sig_length=0.,sig_width=0.,sig_strike=0,sig_dip=0.,
-            name='zongwulong',ss=0.,ds=1.,east=-12.5,north=4.,down=5.,length=15.,width=10.,strike=108,dip=50.,
-            sig_ss=0.,sig_ds=1.,sig_east=0,sig_north=0,sig_down=0,sig_length=10.,sig_width=5.,sig_strike=0,sig_dip=40.,
+            name='zongwulong',ss=0.,ds=slip09,east=-12.5,north=4,down=5.,length=12.,width=5.5,strike=108,dip=53,
+            sig_ss=0.,sig_ds=0.,sig_east=0,sig_north=0,sig_down=0,sig_length=0.,sig_width=0.,sig_strike=0,sig_dip=0.,
+            # name='zongwulong',ss=1.,ds=1.,east=-12.5,north=4.,down=11.,length=12.,width=5.5,strike=108,dip=53.,
+            # sig_ss=1.,sig_ds=1.,sig_east=0,sig_north=0,sig_down=10.,sig_length=0.,sig_width=0.,sig_strike=0,sig_dip=0.,
             prior_dist='Unif',connectivity=False,conservation=False,
             )],
     date=t09,
@@ -433,20 +441,20 @@ basis=[
 
 # Define timeseries data set: time series will be clean temporally from basis functions
 timeseries=[
-    # gpstimeseries(
-    #     #network='synt_gps_km_short.txt',
-    #     # reduction='SYNT', 
-    #     network='synt_gps_km.txt',
-    #     reduction='SYNT-DENSE', # directory where are the time series
-    #     dim=3, # [East, North, Down]: dim=3, [East, North]: dim =2
-    #     wdir=maindir+'gps/',
-    #     scale=1., # scale all values
-    #     weight=1./sig_gps, # give a weight to data set
-    #     proj=[1.,1.,1.],
-    #     extension='.neu',
-    #     base=[0,0,0],
-    #     sig_base=[0,0,0],
-    #     ),
+    gpstimeseries(
+        #network='synt_gps_km_short.txt',
+        # reduction='SYNT', 
+        network='synt_gps_km.txt',
+        reduction='SYNT-DENSE', # directory where are the time series
+        dim=3, # [East, North, Down]: dim=3, [East, North]: dim =2
+        wdir=maindir+'gps/',
+        scale=1., # scale all values
+        weight=1./sig_gps, # give a weight to data set
+        proj=[1.,1.,1.],
+        extension='.neu',
+        base=[0,0,0],
+        sig_base=[0,0,0],
+        ),
      ]
 
 # Define stack data set: velcoity maps, average displacements GPS vectors, interferograms, ect...
@@ -455,21 +463,21 @@ stacks=[
     insarstack(network='int_{}-{}.xylos'.format(dates[2],dates[3]),
             reduction='Int.1',wdir=maindir+'insar/',proj=projm,
             tmin= times[2], tmax=times[3], los=None,heading=None,
-            # weight=1./sig_insar,scale=1.,base=[-0.0008, 0.0004, 0.0],sig_base=[0.,0.,0.],dist='Unif'),
-            weight=1./sig_insar,scale=1.,base=[0., 0., 0.],sig_base=[0.001,0.001,0.001],dist='Unif'),
+            weight=1./sig_insar,scale=1.,base=[ramp1_b, ramp1_a, ramp1_c],sig_base=[0.,0.,0.],dist='Unif'),
+            # weight=1./sig_insar,scale=1.,base=[0., 0., 0.],sig_base=[0.001,0.001,0.001],dist='Unif'),
 
     insarstack(network='int_{}-{}.xylos'.format(dates[4],dates[5]),
             reduction='Int.2',wdir=maindir+'insar/',proj=projm,
             tmin= times[4], tmax=times[5], los=None,heading=None,
-            # weight=1./sig_insar,scale=1.,base=[-0.0008, 0.0004, 0.0],sig_base=[0.001,0.001,0.001],dist='Unif'),
-            weight=1./sig_insar,scale=1.,base=[0., 0., 0.],sig_base=[0.001,0.001,0.001],dist='Unif'),
+            # weight=1./sig_insar,scale=1.,base=[ramp2_b, ramp2_a, ramp2_c],sig_base=[0.,0.,0.],dist='Unif'),
+            weight=1./sig_insar,scale=1.,base=[0., 0., 0.],sig_base=[0.01,0.01,0.01],dist='Unif'),
     ]
 
 # Optimisation
 short_optim = False # if True: fast optimization with scipy
 bayesian = True # if True: bayesian exploration with Metropolis sampling
 MAP = False # if True: display maximum posteriori values using functions in Scipy's optimize
-niter=2000 # number of sampling for bayesian exploration
+niter=2000 # number of sampling for exploration
 nburn=500 # number of burned sampled 
 
 

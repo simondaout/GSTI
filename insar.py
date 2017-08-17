@@ -55,6 +55,7 @@ class insarstack:
 
     def load(self,inv):
         fname=self.wdir + self.network
+        print
         if not path.isfile(fname):
             raise ValueError("invalid file name: " + fname)
         else:
@@ -144,13 +145,20 @@ class insarstack:
 
 
     def info(self):
+        print
         print 'InSAR map acquiered between tmin:{} and tmax:{}'.format(self.tmin,self.tmax)
         print 'Number of points:', self.Npoints
         print 'phi: {}, theta: {}'.format(np.rad2deg(self.phim),np.rad2deg(self.thetam))
         print '[East, North, Down] vector :', self.projm
+        print
+
+    def printbase(self):
+        print
+        print 'InSAR map acquiered between tmin:{} and tmax:{}'.format(self.tmin,self.tmax)
+        print 'Orbital ramp: {}*x + {}*y + {})'.format(self.base[0],self.base[1],self.base[2])
         # print self.d[:20]
         # sys.exit()
-        print
+        
 
 
     def g(self,inv,m):
@@ -177,6 +185,7 @@ class insarstack:
         # update reference brame
         self.base = m[:self.Mbase]
         # print self.base
+        # print
         self.gm[1::2] += self.reference()  
         # print self.gm      
 

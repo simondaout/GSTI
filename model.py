@@ -59,6 +59,7 @@ class inversion:
         for i in xrange(self.Nmanif):
             self.manifolds[i].load(self)
             self.manifolds[i].info()
+            self.manifolds[i].printbase()
 
         # Careful: after loading data
         self.N = sum(map((lambda x: getattr(x,'N')),self.manifolds))
@@ -74,6 +75,7 @@ class inversion:
         # sys.exit()
 
         # # free parameters
+        self.Mpatch = self.segments[0].Mpatch
         # self.Mpatch = sum(map((lambda x: getattr(x,'Mpatch')),self.segments))
 
     def info(self):
@@ -292,7 +294,8 @@ class inversion:
 
         return self.minit
 
-    def build_gm(self,theta):
+
+    def build_gm(self):
         g = np.zeros((self.N))
         start=0
 
@@ -301,8 +304,8 @@ class inversion:
             manifold = self.stacks[i]
             index = manifold.Mbase
 
-            mp = as_strided(theta[M:M+index])
-            mpp = as_strided(theta[self.Msurface:])
+            mp = as_strided(self.m[M:M+index])
+            mpp = as_strided(self.m[self.Msurface:])
             m = np.concatenate([mp,mpp])
             # print m
             # print 
@@ -322,8 +325,8 @@ class inversion:
 
             # print theta[:self.Msurface]
             # sys.exit()
-            mp = as_strided(theta[M:M+index])
-            mpp = as_strided(theta[self.Msurface:])
+            mp = as_strided(self.m[M:M+index])
+            mpp = as_strided(self.m[self.Msurface:])
 
             m = np.concatenate([mp,mpp])
             # print m
@@ -336,75 +339,9 @@ class inversion:
 
         return g
 
-    # @theano.compile.ops.as_op(itypes=[t.lscalar],otypes=[t.dvector])
-    def foward(self, theta):
-        g = np.zeros((self.N))
-
-        # Rebuild the full m vector
-        self.m = []
-        uu = 0
-        for name, initial in zip(self.name, self.minit):
-            if name in self.sampled:
-                self.m.append(theta[uu])
-                uu +=  1
-            elif name in self.fixed:
-                self.m.append(initial)
-
-        # check plan bellow the surface
-        for j in xrange(self.Mseg):
-            depth = as_strided(self.m[self.Msurface+4*(j+1)])
-            width = as_strided(self.m[self.Msurface+6*(j+1)])
-            if (depth < 0.) or (width >= depth):
-               return np.ones((self.N,))*1e14
-
-        self.m = np.array(self.m)
-        start=0
-        M=0
-        for i in xrange(self.Nstacks):
-            manifold = self.stacks[i]
-            index = manifold.Mbase
-
-            mp = as_strided(self.m[M:M+index])
-            mpp = as_strided(self.m[self.Msurface:])
-            m = np.concatenate([mp,mpp])
-
-            g[start:start+manifold.N]=manifold.g(self,m)
-            
-            start+=manifold.N
-            M += index
-
-        for i in xrange(self.Nts):
-            manifold = self.timeseries[i]
-            index = manifold.Mbase+self.Mbasis*manifold.Npoints*manifold.dim
-
-            # print theta[:self.Msurface]
-            # sys.exit()
-            mp = as_strided(self.m[M:M+index])
-            mpp = as_strided(self.m[self.Msurface:])
-
-            m = np.concatenate([mp,mpp])
-            print m
-
-            g[start:start+manifold.N]=manifold.g(self,m)
-            
-            start+=manifold.N
-            M += index
-
-        return g
-
-    def residual(self,theta):
+    def residual(self):
         r=np.zeros((self.N))
 
-        # Rebuild the full m vector
-        self.m = []
-        uu = 0
-        for name, initial in zip(self.name, self.minit):
-            if name in self.sampled:
-                self.m.append(theta[uu])
-                uu +=  1
-            elif name in self.fixed:
-                self.m.append(initial)
-
         start=0
         M=0
         for i in xrange(self.Nstacks):
@@ -412,8 +349,10 @@ class inversion:
             index = manifold.Mbase
 
             mp = as_strided(self.m[M:M+index])
+            # print mp
             mpp = as_strided(self.m[self.Msurface:])
             m = np.concatenate([mp,mpp])
+            # print 
             # print m
 
             r[start:start+manifold.N]=manifold.residual(self,m)
@@ -439,9 +378,92 @@ class inversion:
 
         return r
 
+
+    # @theano.compile.ops.as_op(itypes=[t.lscalar],otypes=[t.dvector])
+    def foward(self, theta):
+        g = np.zeros((self.N))
+
+        # Rebuild the full m vector
+        self.m = []
+        uu = 0
+        for name, initial in zip(self.name, self.minit):
+            if name in self.sampled:
+                self.m.append(theta[uu])
+                uu +=  1
+            elif name in self.fixed:
+                self.m.append(initial)
+
+        # check plan bellow the surface
+        for j in xrange(self.Mseg):
+            depth = as_strided(self.m[self.Msurface+4+self.Mpatch*j])
+            width = as_strided(self.m[self.Msurface+6+self.Mpatch*j])
+            # print 
+            # print self.m[self.Msurface:]
+            if (depth < 0.) or (width >= 2*depth):
+               print depth,width 
+               return np.ones((self.N,))*1e14
+
+        self.m = np.array(self.m)
+
+        start=0
+        M=0
+        for i in xrange(self.Nstacks):
+            manifold = self.stacks[i]
+            index = manifold.Mbase
+
+            mp = as_strided(self.m[M:M+index])
+            # print mp
+            mpp = as_strided(self.m[self.Msurface:])
+            m = np.concatenate([mp,mpp])
+
+            g[start:start+manifold.N]=manifold.g(self,m)
+            
+            start+=manifold.N
+            M += index
+
+        for i in xrange(self.Nts):
+            manifold = self.timeseries[i]
+            index = manifold.Mbase+self.Mbasis*manifold.Npoints*manifold.dim
+
+            # print theta[:self.Msurface]
+            # sys.exit()
+            mp = as_strided(self.m[M:M+index])
+            mpp = as_strided(self.m[self.Msurface:])
+            m = np.concatenate([mp,mpp])
+            # print m
+
+            g[start:start+manifold.N]=manifold.g(self,m)
+            
+            start+=manifold.N
+            M += index
+
+        return g
+
     def residualscalar(self,theta):
+
+        # Rebuild the full m vector
+        self.m = []
+        uu = 0
+        for name, initial in zip(self.name, self.minit):
+            if name in self.sampled:
+                self.m.append(theta[uu])
+                uu +=  1
+            elif name in self.fixed:
+                self.m.append(initial)
+
+        # # check plan bellow the surface
+        # for j in xrange(self.Mseg):
+        #     depth = as_strided(self.m[self.Msurface+4+self.Mpatch*j])
+        #     width = as_strided(self.m[self.Msurface+6+self.Mpatch*j])
+        #     # print 
+        #     # print self.m[self.Msurface:]
+        #     # print depth,width
+        #     if (depth < 0.) or (width >= 2*depth):
+        #        return 1e30
+
         # norm L1
-        res = np.sum(self.residual(theta))
+        res = np.sum(self.residual())
+        # print res
         return res
 
 
@@ -628,7 +650,7 @@ class inversion:
                 fig.colorbar(cmap, ax=ax, aspect=5)
 
                 ax = fig.axes[2]
-                cmap = ax.tricontourf(manifold.x, manifold.y, manifold.res[1::2],
+                cmap = ax.tricontourf(manifold.x, manifold.y, manifold.res[1::2]-manifold.res[0::2],
                                 cmap='seismic', levels=levels)
 
                 plotgmt(self.gmtfiles, ax)
