@@ -260,13 +260,13 @@ disp += xr
 
 # Add orbital ramp to the interferograms
 ramp1_a,ramp1_b,ramp1_c = -0.0008, 0.0004, 0.0
-print 'Add synthetic ramp: {}*y + {}*x + {})'.format(ramp1_a,ramp1_b,ramp1_c)
+print 'Add synthetic ramp: {}*y + {}*x + {}'.format(ramp1_a,ramp1_b,ramp1_c)
 ramp1 = ramp1_a*N[:Ninsar] + ramp1_b*E[:Ninsar] + ramp1_c
 disp[:Ninsar,0] = disp[:Ninsar,0]+ramp1
 
 ramp2_a,ramp2_b,ramp2_c = -0.008, 0.0004, 0.0
 ramp2 = ramp2_a*N[:Ninsar] + ramp2_b*E[:Ninsar] + ramp2_c
-print 'Add synthetic ramp: {}*y + {}*x + {})'.format(ramp2_a,ramp2_b,ramp2_c)
+print 'Add synthetic ramp: {}*y + {}*x + {}'.format(ramp2_a,ramp2_b,ramp2_c)
 disp[Ninsar:2*Ninsar,0] = disp[Ninsar:2*Ninsar,0]+ramp2
 print 
 
@@ -384,6 +384,7 @@ if savedata==True:
 ############ OPTIMISATION PARAMETERS ################
 #####################################################
 
+print
 print 'Start Optimization...'
 print
 
@@ -441,20 +442,20 @@ basis=[
 
 # Define timeseries data set: time series will be clean temporally from basis functions
 timeseries=[
-    gpstimeseries(
-        #network='synt_gps_km_short.txt',
-        # reduction='SYNT', 
-        network='synt_gps_km.txt',
-        reduction='SYNT-DENSE', # directory where are the time series
-        dim=3, # [East, North, Down]: dim=3, [East, North]: dim =2
-        wdir=maindir+'gps/',
-        scale=1., # scale all values
-        weight=1./sig_gps, # give a weight to data set
-        proj=[1.,1.,1.],
-        extension='.neu',
-        base=[0,0,0],
-        sig_base=[0,0,0],
-        ),
+    # gpstimeseries(
+    #     #network='synt_gps_km_short.txt',
+    #     # reduction='SYNT', 
+    #     network='synt_gps_km.txt',
+    #     reduction='SYNT-DENSE', # directory where are the time series
+    #     dim=3, # [East, North, Down]: dim=3, [East, North]: dim =2
+    #     wdir=maindir+'gps/',
+    #     scale=1., # scale all values
+    #     weight=1./sig_gps, # give a weight to data set
+    #     proj=[1.,1.,1.],
+    #     extension='.neu',
+    #     base=[0,0,0],
+    #     sig_base=[0,0,0],
+    #     ),
      ]
 
 # Define stack data set: velcoity maps, average displacements GPS vectors, interferograms, ect...
@@ -474,8 +475,8 @@ stacks=[
     ]
 
 # Optimisation
-short_optim = False # if True: fast optimization with scipy
-bayesian = True # if True: bayesian exploration with Metropolis sampling
+short_optim = True # if True: fast optimization with scipy
+bayesian = False # if True: bayesian exploration with Metropolis sampling
 MAP = False # if True: display maximum posteriori values using functions in Scipy's optimize
 niter=2000 # number of sampling for exploration
 nburn=500 # number of burned sampled 

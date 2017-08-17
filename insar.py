@@ -55,11 +55,11 @@ class insarstack:
 
     def load(self,inv):
         fname=self.wdir + self.network
-        print
         if not path.isfile(fname):
             raise ValueError("invalid file name: " + fname)
         else:
             print 'Load InSAR stack: ', fname
+            print
             
         # heritated informations from flt to compute 
         # profile-parallel and profile-perp. displacements

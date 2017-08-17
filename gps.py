@@ -62,11 +62,11 @@ class gpstimeseries:
         self.y0 = inv.profile.y
 
         fname=self.wdir + self.network
-        print
         if not path.isfile(fname):
             raise ValueError("invalid file name: " + fname)
         else:
             print 'Load GPS time series: ', fname
+            print 
         
         f=file(fname,'r')
         # name, east(km), north(km)
@@ -151,11 +151,10 @@ class gpstimeseries:
         print 'GPS time series from network:',self.network
         print 'Number of stations:', self.Npoints
         print 'Number of data:', self.N
-        print
 
     def printbase(self):
-        print 'GPS time series from network:',self.network
         print 'Reference frame:', self.base
+        print 
 
     def g(self,inv,m):
 

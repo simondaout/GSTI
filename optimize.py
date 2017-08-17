@@ -99,7 +99,6 @@ gmtfiles=gmtfiles,
 bounds=bounds,
   )
 
-
 # build data matrix
 inv.d = inv.build_data()
 # sys.exit()
@@ -140,6 +139,7 @@ print 'Optmized parameters:'
 bnd=column_stack((inv.mmin,inv.mmax))
 for i in xrange(len(bnd)): 
   print 'bounds for parameter {}: {}'.format(inv.sampled[i],bnd[i])
+print
 
 if short_optim:
 
@@ -229,6 +229,7 @@ print
 inv.residual()
 
 for i in xrange(inv.Nmanif):
+    print 'Network:', inv.manifolds[i].network
     inv.manifolds[i].printbase()
 print
 
