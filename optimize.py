@@ -99,7 +99,6 @@ gmtfiles=gmtfiles,
 bounds=bounds,
   )
 
-
 # build data matrix
 inv.d = inv.build_data()
 # sys.exit()
@@ -229,6 +228,7 @@ print
 inv.residual()
 
 for i in xrange(inv.Nmanif):
+    print 'Network:', inv.manifolds[i].network
     inv.manifolds[i].printbase()
 print
 
