@@ -227,6 +227,7 @@ print
 # compute residual for plots
 inv.residual()
 
+# print results
 for i in xrange(inv.Nmanif):
     print 'Network:', inv.manifolds[i].network
     inv.manifolds[i].printbase()
@@ -236,7 +237,7 @@ for i in xrange(inv.Mker):
     for j in xrange(inv.kernels[i].Mseg):
         print inv.kernels[i].segments[j].info()
 
-# # plots
+# plot results 
 inv.plot_ts_GPS()
 inv.plot_InSAR_maps()
 if bayesian:

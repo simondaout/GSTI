@@ -393,7 +393,7 @@ class inversion:
             elif name in self.fixed:
                 self.m.append(initial)
 
-        # check plan bellow the surface
+        # check that dislocations are bellow the surface
         for j in xrange(self.Mseg):
             depth = as_strided(self.m[self.Msurface+4+self.Mpatch*j])
             width = as_strided(self.m[self.Msurface+6+self.Mpatch*j])
@@ -586,7 +586,7 @@ class inversion:
     def plot_InSAR_maps(self):
         for n in xrange(self.Nstacks):
             manifold = self.stacks[n]
-            # print manifold.network
+            print manifold.network
 
             if manifold.type=='InSAR':
                 fig, _ = plt.subplots(1,3,figsize=(12,4))
@@ -596,7 +596,8 @@ class inversion:
                 # print manifold.gm[1::2]
                 # print vranges
 
-                lmax = np.around(np.abs([np.min(vranges), np.max(vranges)]).max(),decimals=1)
+                # lmax = np.around(np.abs([np.min(vranges), np.max(vranges)]).max(),decimals=1)
+                lmax = np.abs([np.min(vranges), np.max(vranges)]).max()
                 levels = np.linspace(-lmax, lmax, 50)
 
                 ax = fig.axes[0]
@@ -650,7 +651,7 @@ class inversion:
                 fig.colorbar(cmap, ax=ax, aspect=5)
 
                 ax = fig.axes[2]
-                cmap = ax.tricontourf(manifold.x, manifold.y, manifold.res[1::2]-manifold.res[0::2],
+                cmap = ax.tricontourf(manifold.x, manifold.y, manifold.res[1::2],
                                 cmap='seismic', levels=levels)
 
                 plotgmt(self.gmtfiles, ax)

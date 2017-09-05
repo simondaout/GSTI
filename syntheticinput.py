@@ -148,7 +148,6 @@ sources = CombiSource(subsources=patches)
 result_2009 = engine.process(sources, [satellite_target])
 
 
-
 ##############################################
 #       Create synthetic time series         #
 ##############################################
@@ -282,7 +281,7 @@ if plotdata==True:
     cmap = ax.tricontourf(E[:Ninsar], N[:Ninsar],disp[:Ninsar,0]-ramp1,
                                     cmap='seismic', levels=levels)
 
-    ax.set_title('{}-{}'.format(dates[2],dates[3]))
+    ax.set_title('{}-{} + Noise'.format(dates[2],dates[3]))
     ax.set_aspect('equal')
     ax.set_xlabel('[km]')
     ax.set_ylabel('[km]')
@@ -292,7 +291,7 @@ if plotdata==True:
     cmap = ax.tricontourf(E[:Ninsar], N[:Ninsar],disp[:Ninsar,0],
                                     cmap='seismic', levels=levels)
 
-    ax.set_title('{}-{} + Ramp'.format(dates[2],dates[3]))
+    ax.set_title('{}-{} + Noise + Ramp'.format(dates[2],dates[3]))
     ax.set_aspect('equal')
     ax.set_xlabel('[km]')
     ax.set_ylabel('[km]')
@@ -302,7 +301,7 @@ if plotdata==True:
     cmap = ax.tricontourf(E[:Ninsar], N[:Ninsar],disp[Ninsar:2*Ninsar,0]-ramp2,
                                     cmap='seismic', levels=levels)
 
-    ax.set_title('{}-{}'.format(dates[4],dates[5]))
+    ax.set_title('{}-{} + Noise '.format(dates[4],dates[5]))
     ax.set_aspect('equal')
     ax.set_xlabel('[km]')
     ax.set_ylabel('[km]')
@@ -312,7 +311,7 @@ if plotdata==True:
     cmap = ax.tricontourf(E[:Ninsar], N[:Ninsar],disp[Ninsar:2*Ninsar,0],
                                     cmap='seismic', levels=levels)
 
-    ax.set_title('{}-{} + Ramp'.format(dates[4],dates[5]))
+    ax.set_title('{}-{} + Noise + Ramp'.format(dates[4],dates[5]))
     ax.set_aspect('equal')
     ax.set_xlabel('[km]')
     ax.set_ylabel('[km]')
@@ -404,8 +403,8 @@ coseismic(
         segment(
             # name='xitieshan',ss=0.,ds=slip08,east=-13,north=-10,down=15.,length=17.,width=8.,strike=288,dip=31.,
             # sig_ss=0.,sig_ds=0.,sig_east=0,sig_north=0,sig_down=0,sig_length=0.,sig_width=0.,sig_strike=0,sig_dip=0.,
-            name='xitieshan',ss=0.,ds=1,east=-13,north=-10.,down=15.,length=20.,width=6.,strike=288,dip=31.,
-            sig_ss=0.,sig_ds=1.,sig_east=0,sig_north=0,sig_down=0,sig_length=10.,sig_width=5.,sig_strike=0,sig_dip=0.,
+            name='xitieshan',ss=0.,ds=1,east=-13,north=-10.,down=15.,length=17.,width=8.,strike=288,dip=31.,
+            sig_ss=0.,sig_ds=1.,sig_east=0,sig_north=0,sig_down=0,sig_length=0.,sig_width=0.,sig_strike=0,sig_dip=0.,
             prior_dist='Unif',connectivity=False,conservation=False,
             )],
     date=t08,
@@ -442,20 +441,20 @@ basis=[
 
 # Define timeseries data set: time series will be clean temporally from basis functions
 timeseries=[
-    # gpstimeseries(
-    #     #network='synt_gps_km_short.txt',
-    #     # reduction='SYNT', 
-    #     network='synt_gps_km.txt',
-    #     reduction='SYNT-DENSE', # directory where are the time series
-    #     dim=3, # [East, North, Down]: dim=3, [East, North]: dim =2
-    #     wdir=maindir+'gps/',
-    #     scale=1., # scale all values
-    #     weight=1./sig_gps, # give a weight to data set
-    #     proj=[1.,1.,1.],
-    #     extension='.neu',
-    #     base=[0,0,0],
-    #     sig_base=[0,0,0],
-    #     ),
+    gpstimeseries(
+        #network='synt_gps_km_short.txt',
+        # reduction='SYNT', 
+        network='synt_gps_km.txt',
+        reduction='SYNT-DENSE', # directory where are the time series
+        dim=3, # [East, North, Down]: dim=3, [East, North]: dim =2
+        wdir=maindir+'gps/',
+        scale=1., # scale all values
+        weight=1./sig_gps, # give a weight to data set
+        proj=[1.,1.,1.],
+        extension='.neu',
+        base=[0,0,0],
+        sig_base=[0,0,0],
+        ),
      ]
 
 # Define stack data set: velcoity maps, average displacements GPS vectors, interferograms, ect...
@@ -465,20 +464,20 @@ stacks=[
             reduction='Int.1',wdir=maindir+'insar/',proj=projm,
             tmin= times[2], tmax=times[3], los=None,heading=None,
             weight=1./sig_insar,scale=1.,base=[ramp1_b, ramp1_a, ramp1_c],sig_base=[0.,0.,0.],dist='Unif'),
-            # weight=1./sig_insar,scale=1.,base=[0., 0., 0.],sig_base=[0.001,0.001,0.001],dist='Unif'),
+            # weight=1./sig_insar,scale=1.,base=[0., 0., 0.],sig_base=[0.01,0.01,0.01],dist='Unif'),
 
     insarstack(network='int_{}-{}.xylos'.format(dates[4],dates[5]),
             reduction='Int.2',wdir=maindir+'insar/',proj=projm,
             tmin= times[4], tmax=times[5], los=None,heading=None,
-            weight=1./sig_insar,scale=1.,base=[ramp2_b, ramp2_a, ramp2_c],sig_base=[0.,0.,0.],dist='Unif'),
-            # weight=1./sig_insar,scale=1.,base=[0., 0., 0.],sig_base=[0.01,0.01,0.01],dist='Unif'),
+            # weight=1./sig_insar,scale=1.,base=[ramp2_b, ramp2_a, ramp2_c],sig_base=[0.,0.,0.],dist='Unif'),
+            weight=1./sig_insar,scale=1.,base=[0., 0., 0.],sig_base=[0.01,0.01,0.01],dist='Unif'),
     ]
 
 # Optimisation
-short_optim = True # if True: fast optimization with scipy
-bayesian = False # if True: bayesian exploration with Metropolis sampling
+short_optim = False # if True: fast optimization with scipy
+bayesian = True # if True: bayesian exploration with Adaptative-Metropolis sampling
 MAP = False # if True: display maximum posteriori values using functions in Scipy's optimize
-niter=2000 # number of sampling for exploration
+niter=1000 # number of sampling for exploration
 nburn=500 # number of burned sampled 
 
 
