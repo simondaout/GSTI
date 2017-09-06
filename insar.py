@@ -241,7 +241,7 @@ class insarstack:
         # print g
         # print self.d
         # # print self.d-g
-        self.res = np.abs((self.d-g))/self.sigmad
+        self.res = (self.d-g)/self.sigmad
         return self.res
 
     def jacobian(self,inv,m,epsi):

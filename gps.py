@@ -239,7 +239,7 @@ class gpstimeseries:
 
     def residual(self,inv,m):
         g=np.asarray(self.g(inv,m))
-        self.res = np.abs((self.d-g))/self.sigmad
+        self.res = (self.d-g)/self.sigmad
         return self.res
 
     def jacobian(self,inv,m,epsi):

@@ -13,7 +13,7 @@ from pyrocko.gf import LocalEngine, StaticTarget, SatelliteTarget,\
 class patch:
     def __init__(self,name,ss,ds,east,north,down,length,width,strike,dip,
         sig_ss,sig_ds,sig_east,sig_north,sig_down,sig_length,sig_width,sig_strike,sig_dip,
-        dist='Unif'):
+        dist='Unif',connectivity=False,conservation=False):
         
         self.name=name
         self.ss,self.sss=ss,sig_ss
@@ -26,6 +26,8 @@ class patch:
         self.strike,self.sstrike=strike,sig_strike
         self.dip,self.sdip=dip,sig_dip
         self.dist=dist
+        self.connectivity=connectivity
+        self.conservation=conservation
 
         # create model vector
         self.param = ['{} strike slip'.format(self.name),'{} dip slip'.format(self.name),'{} north'.format(self.name),'{} east'.format(self.name),'{} down'.format(self.name),'{} length'.format(self.name),'{} width'.format(self.name),'{} strike'.format(self.name),'{} dip'.format(self.name)]
@@ -36,6 +38,26 @@ class patch:
 
         # number of parameters per patch
         self.Mpatch = len(self.m)
+
+    def connect(self,seg):
+        # set strike
+        self.strike= seg.strike
+
+        # compute vertical distance and depth
+        self.x3 = seg.x3 - self.w*math.sin(np.deg2rad(self.dip))
+
+        # compute horizontal distance
+        yp = math.cos(np.deg2rad(self.dip))*self.w
+        east_shift = -math.cos(np.deg2rad(seg.strike))*yp 
+        north_shift = math.sin(np.deg2rad(seg.strike))*yp
+        self.x2,self.x1= seg.x2+east_shift, seg.x1+north_shift
+
+        # set uncertainties to 0
+        self.sstrike, self.sx3, self.sx2, self.sx1 = 0, 0, 0, 0
+
+        # update m vector !!!! dangerous !!!!
+        self.m = self.tolist()
+        self.sigmam = self.sigtolist()
         
     def build_prior(self):
         self.sampled = []
@@ -45,7 +67,7 @@ class patch:
 
         for name, m, sig in zip(self.param, self.m, self.sigmam):
             if sig > 0.:
-                # print name, m-sig, m+sig
+                print name, m-sig, m+sig
                 self.mmin.append(m-sig), self.mmax.append(m+sig)
                 if self.dist == 'Normal':
                     p = pymc.Normal(name, mu=m, sd=sig)
@@ -93,7 +115,8 @@ class patch:
             depth=self.x3*1000., width=self.w*1000., length=self.l*1000.,
             # angles in degree
             dip=self.dip, rake=np.float(np.rad2deg(math.atan2(self.ds,self.ss))), strike=self.strike,
-            slip=(self.ss**2+self.ds**2)**0.5)
+            slip=(self.ss**2+self.ds**2)**0.5,
+            anchor='top')
         # print source
 
         result = engine.process(self.source, [target])
@@ -107,13 +130,11 @@ class segment:
         
         self.Mseg = 1
         self.prior=prior_dist
-        self.connectivity=connectivity
-        self.conservation=conservation
         self.segments=[]
 
-        # if self.conservation==False and self.connectivity==False:
         src = patch(name,ss,ds,east,north,down,length,width,strike,dip,
-            sig_ss,sig_ds,sig_east,sig_north,sig_down,sig_length,sig_width,sig_strike,sig_dip)          
+                sig_ss,sig_ds,sig_east,sig_north,sig_down,sig_length,sig_width,sig_strike,sig_dip,
+                 prior_dist,connectivity,conservation)
 
         self.segments.append(src)
         # print src.ss

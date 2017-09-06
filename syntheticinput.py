@@ -37,7 +37,8 @@ engine = LocalEngine(store_superdirs=store_path,default_store_id=store)
 km = 1e3
 
 # We define a grid for the targets.
-left,right,bottom,top=-35,15,-25,25,
+# left,right,bottom,top=-35,15,-25,25
+left,right,bottom,top=-30,30,-25,25
 
 # Synthetic GPS points 
 # stations_name = [   'XIAO']
@@ -90,22 +91,33 @@ def mw2slip(mw,l,W):
 # [Feng 2015]:  Depth:15km, strike=288, dip:31, rake:90, length=17km, width=8km, mw=6.3
 #               Depth:16km, strike=108, dip:53, rake:117, length=17km, width=5km, mw=6.3
 
-# # north
-east,north=-13, -10
-d = 15.
-strike=288
-dip=31.
-rake = 90 
-l = 17.
-W=8.
-mw=6.3
-slip08 = mw2slip(mw,l,W)
+# # north dipping plane
+# east,north=-13, -10
+# d = 15.
+# strike=288
+# dip=31.
+# rake = 90 
+# l = 17.
+# W=8.
+# mw=6.3
 
+# 2008 event
+# # south dipping place
+east08,north08=0, 0
+d08 = 12.
+strike08=108
+dip08=0.
+rake08 = 90 
+l08 = 12.
+W08=12.
+mw08=6.3
+
+slip08 = mw2slip(mw08,l08,W08)
 co2008 = RectangularSource(
-    north_shift=north*km, east_shift=east*km,
-    depth=d*km, width=W*km, length=l*km,
-    dip=dip, rake=rake, strike=strike,
-    slip=slip08)
+    north_shift=north08*km, east_shift=east08*km,
+    depth=d08*km, width=W08*km, length=l08*km,
+    dip=dip08, rake=rake08, strike=strike08,
+    slip=slip08, anchor='top')
 
 print
 print 'Synthetic model:'
@@ -116,27 +128,44 @@ sources = CombiSource(subsources=patches)
 # The computation is performed by calling process on the engine
 result_2008 = engine.process(sources, [satellite_target])
 
-
 # 2009 event
 # GCMT: lon=95.76, lat=37.64, Depth:12km, strike=101, dip:60, rake:83, mw=6.3
 # [Elliott 2011]: Depth:4.7km, strike=100, dip:53, rake:106, length=12.2km, width=5.4km, mw=6.3
 # [Feng 2015]:  Depth:5km, strike=108, dip:53, rake:90, length=xkm, width=xkm, mw=6.3
+# east09,north09=-12.5,4
+# d09 = 5.
+# strike09=108
+# dip09=53.
+# rake09 = 90 
+# l09 = 12.
+# W09=5.5
+# mw09=6.3
 
-east,north=-12.5,4
-d = 5.
-strike=108
-dip=53.
-rake = 90 
-l = 12.
-W=5.5
-mw=6.3
-slip09 = mw2slip(mw,l,W)
+# lets connect the second rupture to the first one
+rake09 = 90 
+l09 = 12.
+strike09 = strike08
+dip09 = 65.
+W09 = 8.
+mw09 = 6.3
 
+# vertical distance
+d09 = d08 - W09*math.sin(np.deg2rad(dip09))
+
+# horizontal distance
+yp = math.cos(np.deg2rad(dip09))*W09
+
+# shifts 
+east_shift = -math.cos(np.deg2rad(strike08))*yp 
+north_shift = math.sin(np.deg2rad(strike08))*yp
+east09,north09= east08+east_shift, north08+north_shift
+
+slip09 = mw2slip(mw09,l09,W09)
 co2009 = RectangularSource(
-    north_shift=north*km, east_shift=east*km,
-    depth=d*km, width=W*km, length=l*km,
-    dip=dip, rake=rake, strike=strike,
-    slip=slip09)
+    north_shift=north09*km, east_shift=east09*km,
+    depth=d09*km, width=W09*km, length=l09*km,
+    dip=dip09, rake=rake09, strike=strike09,
+    slip=slip09, anchor='top')
 
 print
 print 'Synthetic model:'
@@ -263,7 +292,7 @@ print 'Add synthetic ramp: {}*y + {}*x + {}'.format(ramp1_a,ramp1_b,ramp1_c)
 ramp1 = ramp1_a*N[:Ninsar] + ramp1_b*E[:Ninsar] + ramp1_c
 disp[:Ninsar,0] = disp[:Ninsar,0]+ramp1
 
-ramp2_a,ramp2_b,ramp2_c = -0.008, 0.0004, 0.0
+ramp2_a,ramp2_b,ramp2_c = -0.001, 0.0, 0.0
 ramp2 = ramp2_a*N[:Ninsar] + ramp2_b*E[:Ninsar] + ramp2_c
 print 'Add synthetic ramp: {}*y + {}*x + {}'.format(ramp2_a,ramp2_b,ramp2_c)
 disp[Ninsar:2*Ninsar,0] = disp[Ninsar:2*Ninsar,0]+ramp2
@@ -272,7 +301,7 @@ print
 plotdata = False # if True: plot synthetic data before optimisation
 if plotdata==True:
 
-    fig, _ = plt.subplots(2,2,figsize=(14,8))
+    fig, _ = plt.subplots(2,2,figsize=(10,6))
     vranges = [(disp[:2*Ninsar,0].max(),disp[:2*Ninsar,0].min())]
     lmax = np.around(np.abs([np.min(vranges), np.max(vranges)]).max(),decimals=1)
     levels = np.linspace(-lmax, lmax, 50)
@@ -280,6 +309,22 @@ if plotdata==True:
     ax = fig.axes[0]
     cmap = ax.tricontourf(E[:Ninsar], N[:Ninsar],disp[:Ninsar,0]-ramp1,
                                     cmap='seismic', levels=levels)
+
+    fn, fe = co2008.outline(cs='xy').T/1000
+    ax.fill(fe, fn, color=(0.5, 0.5, 0.5), alpha=0.5)
+    ax.plot(fe[:2],fn[:2],linewidth=2.,color='black',alpha=0.5)
+
+    fn, fe = co2009.outline(cs='xy').T/1000
+    ax.fill(fe, fn, color=(0.5, 0.5, 0.5), alpha=0.5)
+    ax.plot(fe[:2],fn[:2],linewidth=2.,color='black',alpha=0.5)
+
+    # ax.scatter(stations_east[0] , stations_north[0] , c = 'black', s = 40, marker = '^')
+    # ax.text(stations_east[0],stations_north[0],stations_name[0],color='black',fontsize='x-small')
+
+    ax.scatter(co2008.east_shift/1000,co2008.north_shift/1000, c='black', marker='*', s=40)
+    ax.text(co2008.east_shift/1000+2,co2008.north_shift/1000,dates[0],color='black',fontsize='x-small')
+    ax.scatter(co2009.east_shift/1000,co2009.north_shift/1000, c='black', marker='*', s=40)
+    ax.text(co2009.east_shift/1000+2,co2009.north_shift/1000,dates[1],color='black',fontsize='x-small')
 
     ax.set_title('{}-{} + Noise'.format(dates[2],dates[3]))
     ax.set_aspect('equal')
@@ -301,6 +346,22 @@ if plotdata==True:
     cmap = ax.tricontourf(E[:Ninsar], N[:Ninsar],disp[Ninsar:2*Ninsar,0]-ramp2,
                                     cmap='seismic', levels=levels)
 
+    fn, fe = co2008.outline(cs='xy').T/1000
+    ax.fill(fe, fn, color=(0.5, 0.5, 0.5), alpha=0.5)
+    ax.plot(fe[:2],fn[:2],linewidth=2.,color='black',alpha=0.5)
+
+    fn, fe = co2009.outline(cs='xy').T/1000
+    ax.fill(fe, fn, color=(0.5, 0.5, 0.5), alpha=0.5)
+    ax.plot(fe[:2],fn[:2],linewidth=2.,color='black',alpha=0.5)
+
+    # ax.scatter(stations_east[0] , stations_north[0] , c = 'black', s = 40, marker = '^')
+    # ax.text(stations_east[0],stations_north[0],stations_name[0],color='black',fontsize='x-small')
+
+    ax.scatter(co2008.east_shift/1000,co2008.north_shift/1000, c='black', marker='*', s=40)
+    ax.text(co2008.east_shift/1000+2,co2008.north_shift/1000,dates[0],color='black',fontsize='x-small')
+    ax.scatter(co2009.east_shift/1000,co2009.north_shift/1000, c='black', marker='*', s=40)
+    ax.text(co2009.east_shift/1000+2,co2009.north_shift/1000,dates[1],color='black',fontsize='x-small')
+
     ax.set_title('{}-{} + Noise '.format(dates[4],dates[5]))
     ax.set_aspect('equal')
     ax.set_xlabel('[km]')
@@ -310,7 +371,6 @@ if plotdata==True:
     ax = fig.axes[3]
     cmap = ax.tricontourf(E[:Ninsar], N[:Ninsar],disp[Ninsar:2*Ninsar,0],
                                     cmap='seismic', levels=levels)
-
     ax.set_title('{}-{} + Noise + Ramp'.format(dates[4],dates[5]))
     ax.set_aspect('equal')
     ax.set_xlabel('[km]')
@@ -320,7 +380,7 @@ if plotdata==True:
     fig.tight_layout()
 
 
-    fig, _ = plt.subplots(4,1,figsize=(14,8))
+    fig, _ = plt.subplots(4,1,figsize=(10,6))
     # plot first GPS station surface displacements
     comps = ['los','east','down','north']
     ymin,ymax = 0.05, -0.05
@@ -401,12 +461,10 @@ coseismic(
     name='2008 event',
     structures=[
         segment(
-            # name='xitieshan',ss=0.,ds=slip08,east=-13,north=-10,down=15.,length=17.,width=8.,strike=288,dip=31.,
-            # sig_ss=0.,sig_ds=0.,sig_east=0,sig_north=0,sig_down=0,sig_length=0.,sig_width=0.,sig_strike=0,sig_dip=0.,
-            name='xitieshan',ss=0.,ds=1,east=-13,north=-10.,down=15.,length=17.,width=8.,strike=288,dip=31.,
+            name='xitieshan',ss=0.,ds=1,east=east08,north=north08,down=d08,length=l08,width=W08,strike=strike08,dip=dip08,
             sig_ss=0.,sig_ds=1.,sig_east=0,sig_north=0,sig_down=0,sig_length=0.,sig_width=0.,sig_strike=0,sig_dip=0.,
-            prior_dist='Unif',connectivity=False,conservation=False,
-            )],
+            prior_dist='Unif',connectivity=False,conservation=False)
+            ],
     date=t08,
     sigmam=1.0,
     ),
@@ -415,11 +473,9 @@ coseismic(
     name='2009 event',
     structures=[
         segment(
-            name='zongwulong',ss=0.,ds=slip09,east=-12.5,north=4,down=5.,length=12.,width=5.5,strike=108,dip=53,
-            sig_ss=0.,sig_ds=0.,sig_east=0,sig_north=0,sig_down=0,sig_length=0.,sig_width=0.,sig_strike=0,sig_dip=0.,
-            # name='zongwulong',ss=1.,ds=1.,east=-12.5,north=4.,down=11.,length=12.,width=5.5,strike=108,dip=53.,
-            # sig_ss=1.,sig_ds=1.,sig_east=0,sig_north=0,sig_down=10.,sig_length=0.,sig_width=0.,sig_strike=0,sig_dip=0.,
-            prior_dist='Unif',connectivity=False,conservation=False,
+            name='zongwulong',ss=0.,ds=1,east=0,north=0,down=0,length=l09,width=W09,strike=0,dip=dip09,
+            sig_ss=0.,sig_ds=1.,sig_east=100.,sig_north=100.,sig_down=100.,sig_length=0.,sig_width=0.,sig_strike=360.,sig_dip=0.,
+            prior_dist='Unif',connectivity='xitieshan',conservation=False,
             )],
     date=t09,
     sigmam=1.0,
@@ -474,8 +530,8 @@ stacks=[
     ]
 
 # Optimisation
-short_optim = False # if True: fast optimization with scipy
-bayesian = True # if True: bayesian exploration with Adaptative-Metropolis sampling
+short_optim = True # if True: fast optimization with scipy
+bayesian = False # if True: bayesian exploration with Adaptative-Metropolis sampling
 MAP = False # if True: display maximum posteriori values using functions in Scipy's optimize
 niter=1000 # number of sampling for exploration
 nburn=500 # number of burned sampled 

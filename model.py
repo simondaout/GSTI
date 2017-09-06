@@ -70,8 +70,17 @@ class inversion:
         for k in xrange(self.Mker):
             segments.append(map((lambda x: getattr(x,'segments')),self.kernels[k].structures))
         self.segments = flatten(segments)
-        self.Mseg = len(self.segments)        
-        # print self.segments
+        self.Mseg = len(self.segments)
+
+        # construct connecivities
+        for k in xrange(self.Mseg):
+            for kk in xrange(self.Mseg):
+                print self.segments[k].connectivity, self.segments[kk].name
+                if self.segments[k].connectivity == self.segments[kk].name:
+                    self.segments[k].connect(self.segments[kk])
+
+        # print self.segments[1].connectivity
+        # print self.segments[0].name
         # sys.exit()
 
         # # free parameters
@@ -441,7 +450,7 @@ class inversion:
 
     def residualscalar(self,theta):
 
-        # Rebuild the full m vector
+        # Rebuild the full m vector: theta lenghts depends of the give bounds
         self.m = []
         uu = 0
         for name, initial in zip(self.name, self.minit):
@@ -451,18 +460,18 @@ class inversion:
             elif name in self.fixed:
                 self.m.append(initial)
 
-        # # check plan bellow the surface
-        # for j in xrange(self.Mseg):
-        #     depth = as_strided(self.m[self.Msurface+4+self.Mpatch*j])
-        #     width = as_strided(self.m[self.Msurface+6+self.Mpatch*j])
-        #     # print 
-        #     # print self.m[self.Msurface:]
-        #     # print depth,width
-        #     if (depth < 0.) or (width >= 2*depth):
-        #        return 1e30
+        # check that dislocations are bellow the surface
+        for j in xrange(self.Mseg):
+            depth = as_strided(self.m[self.Msurface+4+self.Mpatch*j])
+            width = as_strided(self.m[self.Msurface+6+self.Mpatch*j])
+            # print 
+            # print self.m[self.Msurface:]
+            if (depth < 0.) or (width >= 2*depth):
+               print depth,width 
+               return np.ones((self.N,))*1e14
 
         # norm L1
-        res = np.sum(self.residual())
+        res = np.sum(np.abs(self.residual()))
         # print res
         return res
 
@@ -586,7 +595,7 @@ class inversion:
     def plot_InSAR_maps(self):
         for n in xrange(self.Nstacks):
             manifold = self.stacks[n]
-            print manifold.network
+            # print manifold.network
 
             if manifold.type=='InSAR':
                 fig, _ = plt.subplots(1,3,figsize=(12,4))
