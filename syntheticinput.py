@@ -20,8 +20,8 @@ from pyrocko.gf import LocalEngine, StaticTarget, SatelliteTarget,\
     RectangularSource
 
 # define the Green Function store for the synthetic example
-store='halfspace'
-store_path=['./']
+store='gf-halfspace'
+store_path=['./data']
 
 #####################################################
 ############ CREATE SYNTHETIC EXAMPLE ###############
