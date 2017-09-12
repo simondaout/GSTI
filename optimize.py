@@ -87,16 +87,19 @@ outstat = inv.outdir+'stat/'
 if not os.path.exists(outstat):
         os.makedirs(outstat)
 
+
 inv = inversion(
 kernels=kernels,
 basis=basis,
 timeseries=timeseries,
 stacks=stacks,
+seismo=seismo,
 profile=profile,
 store_path=store_path,
 store=store,
 gmtfiles=gmtfiles,
 bounds=bounds,
+ref=reference,
   )
 
 # build data matrix
@@ -119,11 +122,11 @@ inv.residual()
 # sys.exit()
 
 # # plots
-# inv.plot_ts_GPS()
-# inv.plot_InSAR_maps()
-# plt.show()
-# sys.exit()
-
+inv.plot_ts_GPS()
+inv.plot_InSAR_maps()
+plt.show()
+inv.plot_waveforms()
+sys.exit()
 
 print
 print "---------------------------------------------------------------------------"

@@ -5,7 +5,7 @@ import operator
 
 from flatten import *
 
-from pyrocko import gf
+from pyrocko import gf, util
 from pyrocko.guts import List
 from pyrocko.gf import LocalEngine, StaticTarget, SatelliteTarget,\
         RectangularSource
@@ -30,7 +30,10 @@ class patch:
         self.conservation=conservation
 
         # create model vector
-        self.param = ['{} strike slip'.format(self.name),'{} dip slip'.format(self.name),'{} north'.format(self.name),'{} east'.format(self.name),'{} down'.format(self.name),'{} length'.format(self.name),'{} width'.format(self.name),'{} strike'.format(self.name),'{} dip'.format(self.name)]
+        self.param = ['{} strike slip'.format(self.name),'{} dip slip'.format(self.name),\
+        '{} north'.format(self.name),'{} east'.format(self.name),'{} down'.format(self.name),\
+        '{} length'.format(self.name),'{} width'.format(self.name),'{} strike'.format(self.name),\
+        '{} dip'.format(self.name)]
         self.m = self.tolist()
         self.sigmam = self.sigtolist()
         # self.mmin = list(map(operator.sub, self.m, self.sigmam))
@@ -67,7 +70,7 @@ class patch:
 
         for name, m, sig in zip(self.param, self.m, self.sigmam):
             if sig > 0.:
-                print name, m-sig, m+sig
+                # print name, m-sig, m+sig
                 self.mmin.append(m-sig), self.mmax.append(m+sig)
                 if self.dist == 'Normal':
                     p = pymc.Normal(name, mu=m, sd=sig)
@@ -87,11 +90,13 @@ class patch:
         self.Mfree = len(self.sampled)
         
     def info(self):
-        print "name segment:, ", self.name,
+        print "name segment:", self.name
         print "# ss     ds     x1(km)     x2(km)     x3(km)    length(km)     width(km)   strike   dip  "
-        print ' {:.2f}   {:.2f}   {:.1f}   {:.1f}   {:.2f}   {:.2f}   {:.2f}    {:d}     {:d}'.format(*(self.tolist()))
-        print "#sigma_ss     sigma_ds     sigma_x1     sigma_x2     sigma_x3    sigma_length     sigma_width   sigma_strike  sigma_dip  "
-        print '  {:.2f}   {:.2f}   {:.1f}   {:.1f}   {:.2f}   {:.2f}   {:.2f}    {:d}     {:d}'.format(*(self.sigtolist()))
+        print ' {:.2f}   {:.2f}   {:.1f}   {:.1f}   {:.2f}   {:.2f}   {:.2f}    {:d}     {:d}'.\
+        format(*(self.tolist()))
+        print "#sigma_ss   sigma_ds   sigma_x1  sigma_x2  sigma_x3  sigma_length  sigma_width   sigma_strike  sigma_dip  "
+        print '  {:.2f}   {:.2f}   {:.1f}   {:.1f}   {:.2f}   {:.2f}   {:.2f}    {:d}     {:d}'.\
+        format(*(self.sigtolist()))
         print
 
     def tolist(self):
@@ -102,26 +107,31 @@ class patch:
         return [self.sss,self.sds,self.sx1,self.sx2,self.sx3,self.sl,
         self.sw,int(self.sstrike),int(self.sdip)]
 
-    def engine(self,target,store,store_path):
+    def engine(self,target,store,store_path,ref):
 
         engine = LocalEngine(store_superdirs=store_path,default_store_id=store)
 
+        # print store_path, store
+        # print ref[0], ref[1]
         # print self.x1*1000., self.x2*1000., self.x3*1000., self.w*1000., self.l*1000., self.dip,
-        # print np.rad2deg(math.atan2(self.ds,self.ss)), self.strike, (self.ss**2+self.ds**2)**0.5
+        # print np.rad2deg(math.atan2(self.ds,self.ss)), self.strike, self.time, (self.ss**2+self.ds**2)**0.5
+        # print 
 
+        # print self.time
         self.source = RectangularSource(
+            lon= ref[0], lat = ref[1],
             # distances in meters
-            north_shift=self.x1*1000., east_shift=self.x2*1000.,
-            depth=self.x3*1000., width=self.w*1000., length=self.l*1000.,
+            north_shift=np.float(self.x1*1000.), east_shift=np.float(self.x2*1000.),
+            depth=np.float(self.x3*1000.), width=np.float(self.w*1000.), length=np.float(self.l*1000.),
             # angles in degree
-            dip=self.dip, rake=np.float(np.rad2deg(math.atan2(self.ds,self.ss))), strike=self.strike,
-            slip=(self.ss**2+self.ds**2)**0.5,
+            dip=np.float(self.dip), rake=np.float(np.rad2deg(math.atan2(self.ds,self.ss))), 
+            strike=np.float(self.strike),
+            slip=np.float((self.ss**2+self.ds**2)**0.5),
+            time = self.time,
             anchor='top')
-        # print source
+        # print self.source
 
-        result = engine.process(self.source, [target])
-        
-        return result.results_list[0][0].result
+        return engine.process(self.source, target)
 
 class segment:
     def __init__(self,name,ss,ds,east,north,down,length,width,strike,dip,

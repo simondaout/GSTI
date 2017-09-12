@@ -133,6 +133,8 @@ class insarstack:
         self.sigmad = np.ones((self.N))*self.sigmad
         self.t = np.tile([self.tmin, self.tmax],self.Npoints)
         self.Nt = 2
+        # define reference points
+        self.lats,self.lons=np.ones(self.Npoints)*inv.ref[1],np.ones(self.Npoints)*inv.ref[0],
 
         for i in xrange(self.Npoints):
             self.points.append(insarpoint(self.x[i],self.y[i],self.reduction,self.scale*self.ulos[i]*(self.tmax-self.tmin),\
@@ -148,6 +150,7 @@ class insarstack:
         print
         print 'InSAR map acquiered between tmin:{} and tmax:{}'.format(self.tmin,self.tmax)
         print 'Number of points:', self.Npoints
+        print 'Lenght data vector:', self.N
         print 'phi: {}, theta: {}'.format(np.rad2deg(self.phim),np.rad2deg(self.thetam))
         print '[East, North, Down] vector :', self.projm
         print
@@ -159,8 +162,6 @@ class insarstack:
         # print self.d[:20]
         # sys.exit()
         
-
-
     def g(self,inv,m):
 
         m = np.asarray(m)
@@ -175,6 +176,7 @@ class insarstack:
         satellite_targets = SatelliteTarget(
             # distance in meters
             # These changes of units are shit !
+            lats=self.lats,lons=self.lons,
             north_shifts = self.y*1000.,
             east_shifts =  self.x*1000.,
             interpolation='nearest_neighbor',
@@ -213,9 +215,11 @@ class insarstack:
 
                 # update patch parameter
                 seg.ss,seg.ds,seg.x1,seg.x2,seg.x3,seg.l,seg.w,seg.strike,seg.dip = mpp
+                seg.m = seg.tolist()
 
                 # call pyrocko engine and extract los component
-                disp = seg.engine(satellite_targets, inv.store, inv.store_path)['displacement.los']
+                disp = seg.engine(satellite_targets, inv.store, inv.store_path, inv.ref).\
+                results_list[0][0].result['displacement.los']
                 # print disp
 
                 # gt = np.zeros((self.N))

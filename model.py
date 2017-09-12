@@ -13,6 +13,8 @@ from model import *
 from flatten import *
 from readgmt import *
 
+from pyrocko import trace
+
 class profile:
     def __init__(self,name='all',x=0,y=0,l=1000,w=1000,strike=0):
         # profile parameters
@@ -34,25 +36,29 @@ class profile:
         self.xpmax,self.xpmin = self.w/2,self.w/2
 
 class inversion:
-    def __init__(self,kernels,basis,timeseries,stacks,profile,gmtfiles,store_path='./',store=None,bounds=None):
+    def __init__(self,kernels,basis,timeseries,stacks,seismo,profile,gmtfiles,
+        store_path='./',store=None,bounds=None,ref=[0,0]):
         
         self.kernels=flatten(kernels)
         self.basis=flatten(basis)
         self.timeseries=timeseries
         self.stacks=stacks
+        self.seismo=seismo
         self.profile = profile
         self.store_path=store_path
         self.store=store
         self.gmtfiles=gmtfiles
         self.bnds=bounds
+        self.ref=ref
 
         self.Mker = len(self.kernels)
         self.Mbasis = len(self.basis)
         
         self.Nstacks=len(stacks)
         self.Nts=len(timeseries)
+        self.Nwav=len(seismo)
 
-        self.manifolds=flatten([stacks,timeseries])
+        self.manifolds=flatten([stacks,timeseries,seismo])
         self.Nmanif = len(self.manifolds)
 
         # load data and build model vector for each manifolds
@@ -75,7 +81,7 @@ class inversion:
         # construct connecivities
         for k in xrange(self.Mseg):
             for kk in xrange(self.Mseg):
-                print self.segments[k].connectivity, self.segments[kk].name
+                # print self.segments[k].connectivity, self.segments[kk].name
                 if self.segments[k].connectivity == self.segments[kk].name:
                     self.segments[k].connect(self.segments[kk])
 
@@ -83,7 +89,7 @@ class inversion:
         # print self.segments[0].name
         # sys.exit()
 
-        # # free parameters
+        # # number of parameters per patch: same for all
         self.Mpatch = self.segments[0].Mpatch
         # self.Mpatch = sum(map((lambda x: getattr(x,'Mpatch')),self.segments))
 
@@ -91,18 +97,19 @@ class inversion:
         print
         print 'Spacial functions: '
         print '#index #inversion_type #name #date #nb_structures #nb_segments'
+
         for i in xrange(len(self.kernels)):
             kernel=self.kernels[i]
-            print '{0:n} {1:s} {2:s} {3:4.1f} {4:n} {5:n}'.format(i, kernel.inversion_type,\
-            kernel.name, kernel.date, kernel.Mstr, kernel.Mseg)
+            print '{0:n} {1:s} {2:s} {3:.3f} {4:n} {5:n}'.format(i, kernel.inversion_type,\
+            kernel.name, kernel.t0, kernel.Mstr, kernel.Mseg)
         print
 
         print 'Time functions: '
         print '#index #inversion #name #date'
         for i in xrange(len(self.basis)):
             basis=self.basis[i]
-            print '{0:n} {1:s} {2:s} {3:4.1f}'.format(i, basis.inversion_type,\
-            basis.name, basis.date)
+            print '{0:n} {1:s} {2:s} {3:.3f}'.format(i, basis.inversion_type,\
+            basis.name, basis.t0)
         print
 
     def build_data(self):
@@ -119,7 +126,6 @@ class inversion:
 
         # vector m = [ [m_ref, [m_basis for each point and each dim] for each manifolds],
         # m_faults for each segments ]
-
         self.priors = []
         self.sampled = [] 
         self.fixed = []
@@ -159,7 +165,6 @@ class inversion:
         self.Mstacks = len(np.array(flatten(self.minit)))
         # print self.Mstacks
         # print self.Nstacks
-        # sys.exit()
 
         for i in xrange(self.Nts):
             manifold = self.timeseries[i]
@@ -346,6 +351,13 @@ class inversion:
             start+=manifold.N
             M += index
 
+        for i in xrange(self.Nwav):
+
+            manifold = self.seismo[i]
+            m = as_strided(self.m[self.Msurface:])
+            g[start:start+manifold.N]=manifold.g(self,m)
+            start+=manifold.N
+
         return g
 
     def residual(self):
@@ -384,6 +396,13 @@ class inversion:
             
             start+=manifold.N
             M += index
+
+        for i in xrange(self.Nwav):
+
+            manifold = self.seismo[i]
+            m = as_strided(self.m[self.Msurface:])
+            r[start:start+manifold.N]=manifold.residual(self,m)
+            start+=manifold.N
 
         return r
 
@@ -446,6 +465,13 @@ class inversion:
             start+=manifold.N
             M += index
 
+        for i in xrange(self.Nwav):
+
+            manifold = self.seismo[i]
+            m = as_strided(self.m[self.Msurface:])
+            g[start:start+manifold.N]=manifold.g(self,m)
+            start+=manifold.N
+
         return g
 
     def residualscalar(self,theta):
@@ -471,7 +497,9 @@ class inversion:
                return np.ones((self.N,))*1e14
 
         # norm L1
-        res = np.sum(np.abs(self.residual()))
+        res = np.nansum(np.abs(self.residual()))
+        # norm L2
+        # res = np.sqrt(np.nansum(self.residual()**2))
         # print res
         return res
 
@@ -678,6 +706,13 @@ class inversion:
 
                 fig.tight_layout()
 
+    def plot_waveforms(self):
+        for i in xrange(self.Nwav):
+            manifold = self.seismo[i]
+            # trace.snuffle(manifold.traces)
+            trace.snuffle(manifold.syn)
+
+
 def plotgmt(gmtfiles, ax):
     for ii in xrange(len(gmtfiles)):
         name = gmtfiles[ii].name
@@ -688,6 +723,7 @@ def plotgmt(gmtfiles, ax):
         fx,fy = gmtfiles[ii].load()
         for i in xrange(len(fx)):
             ax.plot(fx[i],fy[i],color = color,lw = width)
+
 
 
 

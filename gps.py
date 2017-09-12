@@ -142,6 +142,8 @@ class gpstimeseries:
             self.points[i].Nt=len(self.points[i].t)
             self.N += len(self.points[i].t)*self.dim
             self.d.append(self.points[i].d)
+            self.points[i].lon = inv.ref[0]
+            self.points[i].lat = inv.ref[1]
 
         self.d = np.array(self.d).flatten()
         self.sigmad = self.sigmad*np.ones(self.N)
@@ -150,7 +152,7 @@ class gpstimeseries:
         print
         print 'GPS time series from network:',self.network
         print 'Number of stations:', self.Npoints
-        print 'Number of data:', self.N
+        print 'Lenght data vector:', self.N
 
     def printbase(self):
         print 'Reference frame:', self.base
@@ -165,13 +167,16 @@ class gpstimeseries:
 
         # have to do point by point because temporal sampling might  
         # be different for each stations
+        temp = 0
         for i in xrange(self.Npoints): 
             point = self.points[i]
             #print point.info()
-            gt = as_strided(self.gm[i*self.dim*point.Nt:(i+1)*self.dim*point.Nt])
+            gt = as_strided(self.gm[temp:temp+self.dim*point.Nt])
             # print 'north, east', np.ones(1)*point.y*1000., np.ones(1)*point.x*1000.
 
             satellite_targets = SatelliteTarget(
+                lats = np.ones(1)*point.lat,
+                lons = np.ones(1)*point.lon,
                 north_shifts = np.ones(1)*point.y*1000.,
                 east_shifts =  np.ones(1)*point.x*1000.,
                 interpolation = 'nearest_neighbor',
@@ -216,10 +221,12 @@ class gpstimeseries:
 
                     # update patch parameter
                     seg.ss,seg.ds,seg.x1,seg.x2,seg.x3,seg.l,seg.w,seg.strike,seg.dip = mpp
+                    seg.m = seg.tolist()
                     #print seg.info()
 
                     # call pyrocko engine
-                    disp = seg.engine(satellite_targets, inv.store, inv.store_path)
+                    disp = seg.engine(satellite_targets, inv.store, inv.store_path, inv.ref).\
+                    results_list[0][0].result
                     # print disp
                     # extract desired components
                     
@@ -234,7 +241,9 @@ class gpstimeseries:
                         # print
 
                     start += seg.Mpatch
-            # sys.exit()
+            temp += self.dim*point.Nt
+
+        # sys.exit()
         return self.gm
 
     def residual(self,inv,m):
