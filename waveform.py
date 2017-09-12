@@ -87,7 +87,7 @@ class waveforms:
             # so we can use this later to define a cut-out window for the optimization:
             self.targets.append(target)
 
-        print len(self.traces),len(self.targets)
+        # print len(self.traces), len(self.targets)
 
         for station,tr,target in zip(stations_list,self.traces,self.targets):
             
@@ -95,14 +95,13 @@ class waveforms:
             store = engine.get_store(inv.store)
             # trace.snuffle(tr, events=self.events)
             arrival = store.t('P', self.base_source, target)  # expected P-wave arrival
-            print arrival
-            self.tmin = self.base_source.time+arrival-15  # start 15s before theor. arrival
-            self.tmax = self.base_source.time+arrival+15  # end 15s after theor. arrival
+            # print arrival
+            tmin = self.base_source.time+arrival-15  # start 15s before theor. arrival
+            tmax = self.base_source.time+arrival+15  # end 15s after theor. arrival
             # # print self.tmin,self.tmax
-            tr.chop(tmin=self.tmin, tmax=self.tmax)
-
-            # self.expected_arrivales.append(arrival)            
-            # print tr.tmin
+            tr.chop(tmin=tmin, tmax=tmax)
+            self.tmin.append(tmin)
+            self.tmax.append(tmax)
 
         self.Npoints = len(self.targets)
         # data vector
@@ -117,8 +116,6 @@ class waveforms:
         # convert time 
         self.t = time2dec(map(util.time_to_str, flatten(t))) 
         # print self.t
-        # sys.exit()
-
         self.N =  len(self.d)
         # print self.t
         # sys.exit()
@@ -135,7 +132,6 @@ class waveforms:
     
 
     def g(self,inv,m):
-
         m = np.asarray(m)
         # forward vector
         self.gm=np.zeros((self.N))
@@ -150,39 +146,35 @@ class waveforms:
         for k in xrange(len(inv.kernels)):
             kernel = inv.kernels[k]
             # not sure: slow slips cannot produce seismic waves? so not necessary too loop over it
-            if kernel.seismo is True:
-                # one seimic trace can be the result of slip of several patches
-                for j in xrange(kernel.Mseg):
-                    seg =  kernel.segments[j]
-                    mp = as_strided(m[start:start+seg.Mpatch])
-                    
-                    # update patch parameter
-                    seg.ss,seg.ds,seg.x1,seg.x2,seg.x3,seg.l,seg.w,seg.strike,seg.dip = mp
-                    seg.m = seg.tolist()
+            # if kernel.seismo is True:
+            # one seimic trace can be the result of slip of several patches
+            for j in xrange(kernel.Mseg):
+                seg =  kernel.segments[j]
+                mp = as_strided(m[start:start+seg.Mpatch])
+                
+                # update patch parameter
+                seg.ss,seg.ds,seg.x1,seg.x2,seg.x3,seg.l,seg.w,seg.strike,seg.dip = mp
+                seg.m = seg.tolist()
 
-                    # update time event
-                    seg.time += self.base
+                # update time event
+                seg.time += self.base
 
-                    synt_traces = seg.engine(self.targets,inv.store, inv.store_path, inv.ref).\
-                    pyrocko_traces() 
+                synt_traces = seg.engine(self.targets,inv.store, inv.store_path, inv.ref).\
+                pyrocko_traces() 
+                # for syn,tr in zip(synt_traces,self.traces):
+                # print len(syn.ydata), len(tr.ydata)
+                # sys.exit()
 
-                    # I don't understand how the engine knows the size of the trace
-                    # for syn,tr in zip(synt_traces,self.traces):
-                    #     print len(syn.ydata), len(tr.ydata)
-                    # sys.exit()
-
-                    temp = 0
-                    for i in xrange(self.Npoints):
-                        # print temp 
-                        syn = synt_traces[i]
-                        # chop synt trace
-                        # syn.chop(tmin=self.tmin, tmax=self.tmax)
-    
+                temp = 0
+                for i in xrange(self.Npoints):
+                    # print temp 
+                    syn = synt_traces[i]
+                    # print len(syn.ydata)
+                    # chop synt trace
+                    try: 
+                        syn.chop(tmin=self.tmin[i], tmax=self.tmax[i])
                         gt = as_strided(self.gm[temp:temp+len(syn.ydata)])
                         time = as_strided(self.t[temp:temp+len(syn.ydata)])
-                        # print time
-                        # print inv.kernels[k].g(time)
-                        # sys.exit()
                         gt += syn.ydata*inv.kernels[k].g(time)
                         # print len(gt), gt
                         # print len(self.gm), self.gm
@@ -191,8 +183,10 @@ class waveforms:
                         # print util.time_to_str(syn.tmin), util.time_to_str(self.traces[i].tmin)
                         # ref time synt trace = time patch
                         self.syn[i].ydata += syn.ydata*inv.kernels[k].g(time)
-                        
-                        temp += len(syn.ydata)
+                    except:
+                        pass
+                    
+                    temp += len(syn.ydata)
 
                 start += seg.Mpatch
 
@@ -200,19 +194,16 @@ class waveforms:
 
     def residual(self,inv,m):
 
-        # misfit_list = []  # init a list for a all the singular misfits
-        # norm_list = []  # init a list for a all the singular normalizations
-        # for tr, syn in zip(self.traces, self.syn):
+        misfit_list = []  # init a list for a all the singular misfits
+        norm_list = []  # init a list for a all the singular normalizations
+        for tr, syn in zip(self.traces, self.syn):
 
-        #     # trace.snuffle([tr,syn])
-        #     # print len(tr.ydata),len(syn.ydata) 
-        #     # print 
-
-        #     misfit, norm = tr.misfit(candidate=syn, setup=self.setup) 
-        #     misfit_list.append(misfit), norm_list.append(norm)  # append the misfit into a list
+            misfit, norm = tr.misfit(candidate=syn, setup=self.setup) 
+            misfit_list.append(misfit), norm_list.append(norm)  # append the misfit into a list
             
         # self.res = np.asarray(misfit_list)/(self.sigmad*np.asarray(norm_list))
-        
+        # print self.res
+
         g=np.asarray(self.g(inv,m))
         self.res = (self.d-g)/self.sigmad
         # print self.res

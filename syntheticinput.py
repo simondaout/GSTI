@@ -600,7 +600,7 @@ timeseries=[
     #     extension='.neu',
     #     base=[0,0,0],
     #     sig_base=[0,0,0],
-    #     ),
+    #      ),
      ]
 
 # Define stack data set: velcoity maps, average displacements GPS vectors, interferograms, ect...
@@ -616,13 +616,13 @@ stacks=[
     #         reduction='Int.2',wdir=maindir+'insar/',proj=projm,
     #         tmin= times[2], tmax=times[3], los=None,heading=None,
     #         weight=1./sig_insar,scale=1.,base=[ramp2_b, ramp2_a, ramp2_c],sig_base=[0.,0.,0.],dist='Unif'),
-           # weight=1./sig_insar,scale=1.,base=[0., 0., 0.],sig_base=[0.01,0.01,0.01],dist='Unif'),
+    #        # weight=1./sig_insar,scale=1.,base=[0., 0., 0.],sig_base=[0.01,0.01,0.01],dist='Unif'),
     ]
 
 seismo=[
     waveforms(
-        network='stations_short.txt',
-        reduction='2008_short',wdir=maindir+'waveforms/',
+        network='stations.txt',
+        reduction='2008',wdir=maindir+'waveforms/',
         event='2008_event.csv',filter_corner=0.055,filter_order=4,filter_type='low',
         misfit_norm=2,taper_fade=2.0,weight=1.,base=0,sig_base=0,extension='',dist='Unif')
 ]

@@ -710,7 +710,7 @@ class inversion:
         for i in xrange(self.Nwav):
             manifold = self.seismo[i]
             # trace.snuffle(manifold.traces)
-            trace.snuffle(manifold.syn)
+            trace.snuffle(manifold.syn,events=manifold.events)
 
 
 def plotgmt(gmtfiles, ax):
