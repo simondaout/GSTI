@@ -2,6 +2,9 @@ import numpy as np
 import math,sys
 from matplotlib import pyplot as plt
 from flatten import *
+from date2dec import *
+
+from pyrocko import util
 
 class pattern:
     def __init__(self,name,date,inversion_type,m,sigmam,prior_dist):
@@ -31,7 +34,8 @@ class coseismic(pattern):
         def __init__(self,structures=[],name='',date=0.,inversion_type='space',m=1., sigmam=0.,prior_dist='Unif'):
           pattern.__init__(self,name,date,inversion_type,m,sigmam,prior_dist)
 
-          self.t0=date
+          self.t0=time2dec(date)[0]
+          self.seismo = True
 
           # segments associated to kernel
           self.structures = structures 
@@ -43,6 +47,8 @@ class coseismic(pattern):
           segments = []
           segments.append(map((lambda x: getattr(x,'segments')),self.structures))
           self.segments = flatten(segments)
+          # set time event for all patch
+          map((lambda x: setattr(x,'time',util.str_to_time(self.date))),self.segments)
 
           # print self.Mstr, self.Mseg, self.segments[0].name
           # sys.exit()
@@ -56,10 +62,14 @@ class coseismic(pattern):
 
 def postseismic(tini,tend,Mfunc,structures=[],name='',inversion_type='time',m=1.,sigmam=0.,prior_dist='Unif'):
 
+          self.seimo = False
           # segments associated to kernel
           if len(structures)>0:
             inversion_type = 'space'
 
+          tini = time2dec(tini)[0]
+          tend = time2dec(tend)[0]
+          date = tini
           # print tini,tend
           postseismics=[]
           T=2*(tend-tini)/(Mfunc)
@@ -67,26 +77,29 @@ def postseismic(tini,tend,Mfunc,structures=[],name='',inversion_type='time',m=1.
           tl=tini+(np.array(xrange(Mfunc))+1)*T/2
           # print tl
           
-          postseismics.append(transienti('initial transient',structures,tini,inversion_type,T,m,sigmam,prior_dist))
+          postseismics.append(transienti('initial transient',structures,tini,date,inversion_type,T,m,sigmam,prior_dist))
           for j in xrange(len(tl)-1): 
-              postseismics.append(transientm('transient',structures,tl[j],inversion_type,T,m,sigmam,prior_dist)) 
-          postseismics.append(transientf('final transient',structures,tend,inversion_type,T,m,sigmam,prior_dist))   
+              postseismics.append(transientm('transient',structures,tl[j],date,inversion_type,T,m,sigmam,prior_dist)) 
+          postseismics.append(transientf('final transient',structures,tend,date,inversion_type,T,m,sigmam,prior_dist))   
 
           return postseismics   
 
 class transientm(pattern):
-        def __init__(self,name,structures,date,inversion_type,T,m,sigmam,prior_dist):
+        def __init__(self,name,structures,datedec,date,inversion_type,T,m,sigmam,prior_dist):
           pattern.__init__(self,name,date,inversion_type,m,sigmam,prior_dist)
           
+
+          self.t0=datedec
+          self.T
+
           Mstr = len(structures)
           # each structures can have several segments
           Mseg = sum(map((lambda x: getattr(x,'Mseg')),structures))
           segments = []
           segments.append(map((lambda x: getattr(x,'segments')),structures))
           segments = flatten(segments)
+          map((lambda x: setattr(x,'time',util.str_to_time(self.date))),self.segments)
 
-          self.t0=date
-          self.T=T
 
         def g(self,tp):
           
@@ -94,8 +107,11 @@ class transientm(pattern):
           return ((2*(t-np.sign(t)*(t**2)+0.25))*Box(t)+Heaviside(t-0.5))
 
 class transienti(pattern):
-        def __init__(self,name,structures,date,inversion_type,T,m,sigmam,prior_dist):
+        def __init__(self,name,structures,datedec,date,inversion_type,T,m,sigmam,prior_dist):
           pattern.__init__(self,name,date,inversion_type,m,sigmam,prior_dist)
+
+          self.t0=datedec
+          self.T=T
 
           Mstr = len(structures)
           # each structures can have several segments
@@ -103,9 +119,8 @@ class transienti(pattern):
           segments = []
           segments.append(map((lambda x: getattr(x,'segments')),structures))
           segments = flatten(segments)
+          map((lambda x: setattr(x,'time',util.str_to_time(self.date))),self.segments)
 
-          self.t0=date
-          self.T=T
 
         def g(self,tp):
           t=(tp-self.t0)/self.T
@@ -113,8 +128,11 @@ class transienti(pattern):
           return (4*(t-t**2))*Box(2*t-0.5)+Heaviside(t-0.5)
 
 class transientf(pattern):
-        def __init__(self,name,structures,date,inversion_type,T,m,sigmam,prior_dist):
+        def __init__(self,name,structures,date,datedec,inversion_type,T,m,sigmam,prior_dist):
           pattern.__init__(self,name,date,inversion_type,m,sigmam,prior_dist)
+
+          self.t0=datedec
+          self.T=T
 
           Mstr = len(structures)
           # each structures can have several segments
@@ -122,9 +140,8 @@ class transientf(pattern):
           segments = []
           segments.append(map((lambda x: getattr(x,'segments')),structures))
           segments = flatten(segments)
+          map((lambda x: setattr(x,'time',util.str_to_time(self.date))),self.segments)
 
-          self.t0=date
-          self.T=T
         
         def g(self,tp):
           t=(tp-self.t0)/self.T
@@ -135,7 +152,8 @@ class interseismic(pattern):
         def __init__(self,name,structures=[],date=0.,inversion_type='time',m=1.,sigmam=0.,prior_dist='Unif'):
           pattern.__init__(self,name,date,inversion_type,m,sigmam,prior_dist)
 
-          self.t0=date
+          self.seimo = False
+          self.t0=time2dec(date)
 
           # segments associated to kernel
           self.structures = structures 
@@ -148,6 +166,7 @@ class interseismic(pattern):
           segments = []
           segments.append(map((lambda x: getattr(x,'segments')),self.structures))
           self.segments = flatten(segments)
+          map((lambda x: setattr(x,'time',util.str_to_time(date))),self.segments)
 
         def g(self,t):
           return (t-self.t0)*Heaviside(t-self.t0)
@@ -156,6 +175,7 @@ class reference(pattern):
         def __init__(self,name='temporal ref.',date=0.,inversion_type='time',m=0,sigmam=0.,prior_dist='Unif'):
           pattern.__init__(self,name,date,inversion_type,m,sigmam,prior_dist)
 
+          self.seimo = False
           self.Mstruc=0
           self.Mseg=0
 
@@ -166,6 +186,7 @@ class seasonalvar(pattern):
         def __init__(self,name,date=0.,inversion_type='time',m=0,sigmam=0.,prior_dist='Unif'):
           pattern.__init__(self,name,date,inversion_type,m,sigmam,prior_dist)
 
+          self.seimo = False
           self.Mstruc=0
           self.Mseg=0
 
@@ -180,6 +201,7 @@ class annualvar(pattern):
         def __init__(self,name,date=0.,inversion_type='time',m=0,sigmam=0.,prior_dist='Unif'):
           pattern.__init__(self,name,date,inversion_type,m,sigmam,prior_dist)
 
+          self.seimo = False
           self.Mstruc=0
           self.Mseg=0
 
