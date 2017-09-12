@@ -1,0 +1,23 @@
+name = 200811100122A
+time = 2008-11-10 01:22:10.230
+latitude = 37.51
+longitude = 95.75
+magnitude = 6.37601
+moment = 4.11171e+18
+depth = 27200
+region = QINGHAI, CHINA
+catalog = gCMT
+mnn = -3.48e+18
+mee = 9.74e+17
+mdd = 2.51e+18
+mne = -2.01e+17
+mnd = 2.49e+18
+med = 9.93e+17
+strike1 = 108.169
+dip1 = 66.9741
+rake1 = 106.169
+strike2 = 251.621
+dip2 = 27.8804
+rake2 = 56.7669
+duration = 7.2
+--------------------------------------------
