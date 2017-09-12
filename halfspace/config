@@ -1,0 +1,17 @@
+--- !pf.ConfigTypeA
+id: halfspace
+modelling_code_id: psgrn_pscmp.2008a
+earthmodel_1d: |2
+      0.             5.8            3.34863            2.6           1350.            600.
+      50.            5.8            3.34863            2.6           1350.            600.
+      100.           5.8            3.34863            2.6           1350.            600.
+sample_rate: 1.0
+component_scheme: elastic10
+ncomponents: 10
+receiver_depth: 0.0
+source_depth_min: 500.0
+source_depth_max: 40000.0
+source_depth_delta: 2000.0
+distance_min: 0.0
+distance_max: 500000.0
+distance_delta: 5000.0
