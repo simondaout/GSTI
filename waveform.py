@@ -87,14 +87,17 @@ class waveforms:
             # so we can use this later to define a cut-out window for the optimization:
             self.targets.append(target)
 
+        print len(self.traces),len(self.targets)
+
         for station,tr,target in zip(stations_list,self.traces,self.targets):
             
             engine = LocalEngine(store_superdirs=inv.store_path)
             store = engine.get_store(inv.store)
-            trace.snuffle(tr, events=self.events)
+            # trace.snuffle(tr, events=self.events)
             arrival = store.t('P', self.base_source, target)  # expected P-wave arrival
-            self.tmin = base_source.time+arrival-15  # start 15s before theor. arrival
-            self.tmax = base_source.time+arrival+15  # end 15s after theor. arrival
+            print arrival
+            self.tmin = self.base_source.time+arrival-15  # start 15s before theor. arrival
+            self.tmax = self.base_source.time+arrival+15  # end 15s after theor. arrival
             # # print self.tmin,self.tmax
             tr.chop(tmin=self.tmin, tmax=self.tmax)
 

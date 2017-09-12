@@ -18,12 +18,16 @@ from date2dec import *
 
 # pyrcoko dependencies
 from pyrocko.gf import LocalEngine, StaticTarget, SatelliteTarget,\
-    RectangularSource,Target
+    RectangularSource,Target, ws
 from pyrocko import util, pile, model, config, trace, io, pile
+
 
 # define the Green Function store for the synthetic example
 store1='halfspace'
-store2 = 'global_2s_25km'
+store2 = 'global_2s_70km'
+if not os.path.exists(store2):
+    print 'Downloading gf store from reporisitory'
+    ws.download_gf_store(site='kinherd', store_id=store_id)
 store_path=['./']
 
 ref_lat,ref_lon = 37.6, 95.9 
@@ -212,46 +216,46 @@ result_2009 = engine1.process(sources, [satellite_target])
 #       Create synthetic waveforms           #
 ##############################################
 
-# # 2008 event
-# # We load the refrence event from a event file. This source will be used to
-# # retrieve the expected arrival times.
-# events = []
-# events.extend(model.load_events(filename='./synthetic_example/waveforms/2008_event.csv'))
-# event = events[0]
-# origin = gf.Source(
-#     lat=event.lat,
-#     lon=event.lon)
-# base_source = gf.MTSource.from_pyrocko_event(event)
-# base_source.set_origin(origin.lat, origin.lon)
+# 2008 event
+# We load the refrence event from a event file. This source will be used to
+# retrieve the expected arrival times.
+events = []
+events.extend(model.load_events(filename='./synthetic_example/waveforms/2008_event.csv'))
+event = events[0]
+origin = gf.Source(
+    lat=event.lat,
+    lon=event.lon)
+base_source = gf.MTSource.from_pyrocko_event(event)
+base_source.set_origin(origin.lat, origin.lon)
 
-# # Next follows the loading of the stations and init of targets.
-# # We use the term target for a single component of a single station
-# # fn_stations = './synthetic_example/waveforms/stations.txt' 
-# fn_stations = './synthetic_example/waveforms/stations_short.txt'  
-# stations_list = model.load_stations(fn_stations)  # load the stations file
-# # for s in stations_list:
-# #     s.set_channels_by_name(*'Z'.split())
-# # stations = {}
-# # print stations
+# Next follows the loading of the stations and init of targets.
+# We use the term target for a single component of a single station
+# fn_stations = './synthetic_example/waveforms/stations.txt' 
+fn_stations = './synthetic_example/waveforms/stations_short.txt'  
+stations_list = model.load_stations(fn_stations)  # load the stations file
+# for s in stations_list:
+#     s.set_channels_by_name(*'Z'.split())
+# stations = {}
+# print stations
 
-# # we would also iterate over the components for each station.
-# targets=[]
-# for station in stations_list:  # iterate over all stations
-#     target = Target(
-#             lat=station.lat,  # station lat.
-#             lon=station.lon,   # station lon.
-#             store_id=store2,   # The gf-store to be used for this target,
-#             # we can also employ different gf-stores for different targets.
-#             interpolation='multilinear',   # interp. method between gf cells
-#             quantity='displacement',   # wanted retrieved quantity
-#             codes=station.nsl() + ('BHZ',))  # Station and network code
+# we would also iterate over the components for each station.
+targets=[]
+for station in stations_list:  # iterate over all stations
+    target = Target(
+            lat=station.lat,  # station lat.
+            lon=station.lon,   # station lon.
+            store_id=store2,   # The gf-store to be used for this target,
+            # we can also employ different gf-stores for different targets.
+            interpolation='multilinear',   # interp. method between gf cells
+            quantity='displacement',   # wanted retrieved quantity
+            codes=station.nsl() + ('BHZ',))  # Station and network code
 
-#     targets.append(target)  # append all singular targets in a list
+    targets.append(target)  # append all singular targets in a list
 
-# # engine = gf.get_engine()  # init. the engine
-# response = engine2.process(co2008, targets)
-# # And then we reform the response into traces:
-# synthetic_traces = response.pyrocko_traces()
+# engine = gf.get_engine()  # init. the engine
+response = engine2.process(co2008, targets)
+# And then we reform the response into traces:
+synthetic_traces = response.pyrocko_traces()
 
 ##############################################
 #   Create synthetic Geodetic time series    #
@@ -484,9 +488,10 @@ savedata = False # if True: save synthetic data
 
 if savedata==True:
 
-    # for tr in synthetic_traces:
-    #     # print tr.network, tr.station, tr.location,tr.channel
-    #     io.save(tr, './synthetic_example/waveforms/2008_short/'+'{}.{}.{}.{}'.format(tr.network, tr.station, tr.location,tr.channel))
+    for tr in synthetic_traces:
+        # print tr.network, tr.station, tr.location,tr.channel
+        io.save(tr, './synthetic_example/waveforms/2008_short/'+'{}.{}.{}.{}'.format(tr.network, tr.station, tr.location,tr.channel))
+        # io.save(tr, './synthetic_example/waveforms/2008/'+'{}.{}.{}.{}'.format(tr.network, tr.station, tr.location,tr.channel))
 
     fid = open('./synthetic_example/insar/int_{}-{}.xylos'.format(dates[0],dates[1]),'w')
     # print np.vstack([E[:Ninsar], N[:Ninsar], disp[:Ninsar,0]]).T
@@ -534,7 +539,7 @@ outdir=maindir+'output/'
 # all data load in UTM coordinates relatively to a reference point
 reference = [ref_lon,ref_lat]
 # define green function store
-store = 'global_2s_25km'
+store = 'global_2s_70km'
 # store = 'halfspace'
 store_path=['./']
 
@@ -616,7 +621,6 @@ stacks=[
 
 seismo=[
     waveforms(
-        # network='stations.txt',
         network='stations_short.txt',
         reduction='2008_short',wdir=maindir+'waveforms/',
         event='2008_event.csv',filter_corner=0.055,filter_order=4,filter_type='low',
