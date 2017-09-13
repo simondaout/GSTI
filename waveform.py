@@ -95,7 +95,7 @@ class waveforms:
             store = engine.get_store(inv.store)
             # trace.snuffle(tr, events=self.events)
             arrival = store.t('P', self.base_source, target)  # expected P-wave arrival
-            # print arrival
+            print arrival
             tmin = self.base_source.time+arrival-15  # start 15s before theor. arrival
             tmax = self.base_source.time+arrival+15  # end 15s after theor. arrival
             # # print self.tmin,self.tmax

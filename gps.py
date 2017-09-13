@@ -56,10 +56,10 @@ class gpstimeseries:
 
         # heritated informations from flt to compute 
         # profile-parallel and profile-perp. displacements
-        self.profile=inv.profile
-        self.str = inv.profile.str
-        self.x0 = inv.profile.x
-        self.y0 = inv.profile.y
+        # self.profile=inv.profile
+        # self.str = inv.profile.str
+        # self.x0 = inv.profile.x
+        # self.y0 = inv.profile.y
 
         fname=self.wdir + self.network
         if not path.isfile(fname):
@@ -73,8 +73,8 @@ class gpstimeseries:
         name,x,y=np.loadtxt(f,comments='#',unpack=True,dtype='S4,f,f')
 
         # ref to the center of the profile 
-        self.xp=(x-self.x0)*self.profile.s[0]+(y-self.y0)*self.profile.s[1]
-        self.yp=(x-self.x0)*self.profile.n[0]+(y-self.y0)*self.profile.n[1]
+        # self.xp=(x-self.x0)*self.profile.s[0]+(y-self.y0)*self.profile.s[1]
+        # self.yp=(x-self.x0)*self.profile.n[0]+(y-self.y0)*self.profile.n[1]
 
         # # select points within profile
         # index=np.nonzero((xp>self.profile.xpmax)|(xp<self.profile.xpmin)|(yp>self.profile.ypmax)|(yp<self.profile.ypmin))

@@ -94,7 +94,7 @@ basis=basis,
 timeseries=timeseries,
 stacks=stacks,
 seismo=seismo,
-profile=profile,
+profiles=profiles,
 store_path=store_path,
 store=store,
 gmtfiles=gmtfiles,
@@ -121,11 +121,11 @@ inv.build_gm()
 inv.residual()
 # sys.exit()
 
-# # plots
+# plots
 # inv.plot_ts_GPS()
 # inv.plot_InSAR_maps()
 # plt.show()
-# inv.plot_waveforms()
+# # inv.plot_waveforms()
 # sys.exit()
 
 print
@@ -173,7 +173,6 @@ if bayesian:
   observed = True,
   ) 
 
-  
   # Parameters = locals()
   Parameters = pymc.Model(inv.priors)
   model = pymc.MCMC(Parameters)

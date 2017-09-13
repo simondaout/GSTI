@@ -63,23 +63,23 @@ class insarstack:
             
         # heritated informations from flt to compute 
         # profile-parallel and profile-perp. displacements
-        self.profile=inv.profile
-        self.str = inv.profile.str
-        self.x0 = inv.profile.x
-        self.y0 = inv.profile.y
+        # self.profiles=inv.profiles
+        # self.str = inv.profiles.str
+        # self.x0 = inv.profiles.x
+        # self.y0 = inv.profiles.y
 
         f=file(fname,'r')
         if self.los is not None:
             # load x, y, los, incidence angle 
-            x,y,los,theta=np.loadtxt(f,comments='#',unpack=True,dtype='f,f,f,f')
+            self.x,self.y,self.ulos,self.theta=np.loadtxt(f,comments='#',unpack=True,dtype='f,f,f,f')
 
             # ref to the center of the profile 
-            xp=(x-self.x0)*self.profile.s[0]+(y-self.y0)*self.profile.s[1]
-            yp=(x-self.x0)*self.profile.n[0]+(y-self.y0)*self.profile.n[1]
+            # xp=(x-self.x0)*self.profile.s[0]+(y-self.y0)*self.profile.s[1]
+            # yp=(x-self.x0)*self.profile.n[0]+(y-self.y0)*self.profile.n[1]
             
             # select point within profile
-            index=np.nonzero((xp>self.profile.xpmax)|(xp<self.profile.xpmin)|(yp>self.profile.ypmax)|(yp<self.profile.ypmin))
-            self.ulos,self.x,self.y,self.xp,self.yp,self.theta=np.delete(los,index),np.delete(x,index),np.delete(y,index),np.delete(xp,index),np.delete(yp,index),np.delete(theta,index)
+            # index=np.nonzero((xp>self.profile.xpmax)|(xp<self.profile.xpmin)|(yp>self.profile.ypmax)|(yp<self.profile.ypmin))
+            # self.ulos,self.x,self.y,self.xp,self.yp,self.theta=np.delete(los,index),np.delete(x,index),np.delete(y,index),np.delete(xp,index),np.delete(yp,index),np.delete(theta,index)
             
             # compute phi, theta, pyrocko convention
             self.phi = np.deg2rad(-90-self.heading)
@@ -106,8 +106,8 @@ class insarstack:
             self.x,self.y,self.ulos=np.loadtxt(f,comments='#',unpack=True,dtype='f,f,f')
             
             # ref to the center of the profile 
-            self.xp=(self.x-self.x0)*self.profile.s[0]+(self.y-self.y0)*self.profile.s[1]
-            self.yp=(self.x-self.x0)*self.profile.n[0]+(self.y-self.y0)*self.profile.n[1]
+            # self.xp=(self.x-self.x0)*self.profile.s[0]+(self.y-self.y0)*self.profile.s[1]
+            # self.yp=(self.x-self.x0)*self.profile.n[0]+(self.y-self.y0)*self.profile.n[1]
 
             # select point within profile
             # index=np.nonzero((xp>self.profile.xpmax)|(xp<self.profile.xpmin)|(yp>self.profile.ypmax)|(yp<self.profile.ypmin))

@@ -23,12 +23,12 @@ from pyrocko import util, pile, model, config, trace, io, pile
 
 
 # define the Green Function store for the synthetic example
-store1='halfspace'
-store2 = 'global_2s_70km'
-if not os.path.exists(store2):
-    print 'Downloading gf store from reporisitory'
-    ws.download_gf_store(site='kinherd', store_id=store_id)
-store_path=['./']
+store='halfspace'
+# store = 'global_2s_70km'
+# if not os.path.exists(store):
+#     print 'Downloading gf store from reporisitory'
+#     ws.download_gf_store(site='kinherd', store_id=store)
+store_path=['./synthetic_example/gfstore/']
 
 ref_lat,ref_lon = 37.6, 95.9 
 
@@ -36,8 +36,7 @@ ref_lat,ref_lon = 37.6, 95.9
 ############ CREATE SYNTHETIC EXAMPLE ###############
 #####################################################
 
-engine1 = LocalEngine(store_superdirs=store_path,default_store_id=store1)
-engine2 = LocalEngine(store_superdirs=store_path,default_store_id=store2)
+engine = LocalEngine(store_superdirs=store_path,default_store_id=store)
 
 ##############################################
 #            Targets                         #
@@ -158,7 +157,7 @@ print co2008
 patches = [co2008];
 sources = CombiSource(subsources=patches)
 # The computation is performed by calling process on the engine
-result_2008 = engine1.process(sources, [satellite_target])
+result_2008 = engine.process(sources, [satellite_target])
 
 # 2009 event
 # GCMT: lon=95.76, lat=37.64, Depth:12km, strike=101, dip:60, rake:83, mw=6.3
@@ -210,52 +209,52 @@ print co2009
 patches = [co2009];
 sources = CombiSource(subsources=patches)
 # The computation is performed by calling process on the engine
-result_2009 = engine1.process(sources, [satellite_target])
+result_2009 = engine.process(sources, [satellite_target])
 
 ##############################################
 #       Create synthetic waveforms           #
 ##############################################
 
-# 2008 event
-# We load the refrence event from a event file. This source will be used to
-# retrieve the expected arrival times.
-events = []
-events.extend(model.load_events(filename='./synthetic_example/waveforms/2008_event.csv'))
-event = events[0]
-origin = gf.Source(
-    lat=event.lat,
-    lon=event.lon)
-base_source = gf.MTSource.from_pyrocko_event(event)
-base_source.set_origin(origin.lat, origin.lon)
+# # 2008 event
+# # We load the refrence event from a event file. This source will be used to
+# # retrieve the expected arrival times.
+# events = []
+# events.extend(model.load_events(filename='./synthetic_example/waveforms/2008_event.csv'))
+# event = events[0]
+# origin = gf.Source(
+#     lat=event.lat,
+#     lon=event.lon)
+# base_source = gf.MTSource.from_pyrocko_event(event)
+# base_source.set_origin(origin.lat, origin.lon)
 
-# Next follows the loading of the stations and init of targets.
-# We use the term target for a single component of a single station
+# # Next follows the loading of the stations and init of targets.
+# # We use the term target for a single component of a single station
 # fn_stations = './synthetic_example/waveforms/stations.txt' 
-fn_stations = './synthetic_example/waveforms/stations_short.txt'  
-stations_list = model.load_stations(fn_stations)  # load the stations file
-# for s in stations_list:
-#     s.set_channels_by_name(*'Z'.split())
-# stations = {}
-# print stations
+# # fn_stations = './synthetic_example/waveforms/stations_short.txt'  
+# stations_list = model.load_stations(fn_stations)  # load the stations file
+# # for s in stations_list:
+# #     s.set_channels_by_name(*'Z'.split())
+# # stations = {}
+# # print stations
 
-# we would also iterate over the components for each station.
-targets=[]
-for station in stations_list:  # iterate over all stations
-    target = Target(
-            lat=station.lat,  # station lat.
-            lon=station.lon,   # station lon.
-            store_id=store2,   # The gf-store to be used for this target,
-            # we can also employ different gf-stores for different targets.
-            interpolation='multilinear',   # interp. method between gf cells
-            quantity='displacement',   # wanted retrieved quantity
-            codes=station.nsl() + ('BHZ',))  # Station and network code
+# # we would also iterate over the components for each station.
+# targets=[]
+# for station in stations_list:  # iterate over all stations
+#     target = Target(
+#             lat=station.lat,  # station lat.
+#             lon=station.lon,   # station lon.
+#             store_id=store,   # The gf-store to be used for this target,
+#             # we can also employ different gf-stores for different targets.
+#             interpolation='multilinear',   # interp. method between gf cells
+#             quantity='displacement',   # wanted retrieved quantity
+#             codes=station.nsl() + ('BHZ',))  # Station and network code
 
-    targets.append(target)  # append all singular targets in a list
+#     targets.append(target)  # append all singular targets in a list
 
-# engine = gf.get_engine()  # init. the engine
-response = engine2.process(co2008, targets)
-# And then we reform the response into traces:
-synthetic_traces = response.pyrocko_traces()
+# # engine = gf.get_engine()  # init. the engine
+# response = engine.process(co2008, targets)
+# # And then we reform the response into traces:
+# synthetic_traces = response.pyrocko_traces()
 
 ##############################################
 #   Create synthetic Geodetic time series    #
@@ -471,7 +470,7 @@ if plotdata==True:
         fig.autofmt_xdate()
 
     plt.title('Station {} time series'.format(stations_name[0]))
-    # plt.show()
+    plt.show()
 
     # open waveforms with Pyrocko
     # trace.snuffle(synthetic_traces)
@@ -481,17 +480,15 @@ if plotdata==True:
 #            Save Foward model               #
 ##############################################
 
-#### Uncomment to create new data files ######
-
 # # save interferograms
 savedata = False # if True: save synthetic data
 
 if savedata==True:
 
-    for tr in synthetic_traces:
-        # print tr.network, tr.station, tr.location,tr.channel
-        io.save(tr, './synthetic_example/waveforms/2008_short/'+'{}.{}.{}.{}'.format(tr.network, tr.station, tr.location,tr.channel))
-        # io.save(tr, './synthetic_example/waveforms/2008/'+'{}.{}.{}.{}'.format(tr.network, tr.station, tr.location,tr.channel))
+    # for tr in synthetic_traces:
+    #     # print tr.network, tr.station, tr.location,tr.channel
+    #     # io.save(tr, './synthetic_example/waveforms/2008_short/'+'{}.{}.{}.{}'.format(tr.network, tr.station, tr.location,tr.channel))
+    #     io.save(tr, './synthetic_example/waveforms/2008/'+'{}.{}.{}.{}'.format(tr.network, tr.station, tr.location,tr.channel))
 
     fid = open('./synthetic_example/insar/int_{}-{}.xylos'.format(dates[0],dates[1]),'w')
     # print np.vstack([E[:Ninsar], N[:Ninsar], disp[:Ninsar,0]]).T
@@ -539,9 +536,7 @@ outdir=maindir+'output/'
 # all data load in UTM coordinates relatively to a reference point
 reference = [ref_lon,ref_lat]
 # define green function store
-store = 'global_2s_70km'
-# store = 'halfspace'
-store_path=['./']
+store_path=['./synthetic_example/gfstore/']
 
 # Define Spatio-temporal functions : kernels(time, space)
 # Dictionary of available functions: coseismic(), interseismic(), postseismic()
@@ -587,44 +582,44 @@ basis=[
 
 # Define timeseries data set: time series will be clean temporally from basis functions
 timeseries=[
-    # gpstimeseries(
-    #     # network='synt_gps_km_short.txt',
-    #     # reduction='SYNT', 
-    #     network='synt_gps_km.txt',
-    #     reduction='SYNT-DENSE', # directory where are the time series
-    #     dim=3, # [East, North, Down]: dim=3, [East, North]: dim =2
-    #     wdir=maindir+'gps/',
-    #     scale=1., # scale all values
-    #     weight=1./sig_gps, # give a weight to data set
-    #     proj=[1.,1.,1.],
-    #     extension='.neu',
-    #     base=[0,0,0],
-    #     sig_base=[0,0,0],
-    #      ),
+    gpstimeseries(
+        # network='synt_gps_km_short.txt',
+        # reduction='SYNT', 
+        network='synt_gps_km.txt',
+        reduction='SYNT-DENSE', # directory where are the time series
+        dim=3, # [East, North, Down]: dim=3, [East, North]: dim =2
+        wdir=maindir+'gps/',
+        scale=1., # scale all values
+        weight=1./sig_gps, # give a weight to data set
+        proj=[1.,1.,1.],
+        extension='.neu',
+        base=[0,0,0],
+        sig_base=[0,0,0],
+         ),
      ]
 
 # Define stack data set: velcoity maps, average displacements GPS vectors, interferograms, ect...
 # Cannot be clean from temporal basis functions
 stacks=[
-    # insarstack(network='int_{}-{}.xylos'.format(dates[0],dates[1]),
-    #         reduction='Int.1',wdir=maindir+'insar/',proj=projm,
-    #         tmin= times[0], tmax=times[1], los=None,heading=None,
-    #         # weight=1./sig_insar,scale=1.,base=[ramp1_b, ramp1_a, ramp1_c],sig_base=[0.,0.,0.],dist='Unif'),
-    #         weight=1./sig_insar,scale=1.,base=[0., 0., 0.],sig_base=[0.01,0.01,0.01],dist='Unif'),
+    insarstack(network='int_{}-{}.xylos'.format(dates[0],dates[1]),
+            reduction='Int.1',wdir=maindir+'insar/',proj=projm,
+            tmin= times[0], tmax=times[1], los=None,heading=None,
+            weight=1./sig_insar,scale=1.,base=[ramp1_b, ramp1_a, ramp1_c],sig_base=[0.,0.,0.],dist='Unif'),
+            # weight=1./sig_insar,scale=1.,base=[0., 0., 0.],sig_base=[0.01,0.01,0.01],dist='Unif'),
 
-    # insarstack(network='int_{}-{}.xylos'.format(dates[2],dates[3]),
-    #         reduction='Int.2',wdir=maindir+'insar/',proj=projm,
-    #         tmin= times[2], tmax=times[3], los=None,heading=None,
-    #         weight=1./sig_insar,scale=1.,base=[ramp2_b, ramp2_a, ramp2_c],sig_base=[0.,0.,0.],dist='Unif'),
-    #        # weight=1./sig_insar,scale=1.,base=[0., 0., 0.],sig_base=[0.01,0.01,0.01],dist='Unif'),
+    insarstack(network='int_{}-{}.xylos'.format(dates[2],dates[3]),
+            reduction='Int.2',wdir=maindir+'insar/',proj=projm,
+            tmin= times[2], tmax=times[3], los=None,heading=None,
+            weight=1./sig_insar,scale=1.,base=[ramp2_b, ramp2_a, ramp2_c],sig_base=[0.,0.,0.],dist='Unif'),
+           # weight=1./sig_insar,scale=1.,base=[0., 0., 0.],sig_base=[0.01,0.01,0.01],dist='Unif'),
     ]
 
 seismo=[
-    waveforms(
-        network='stations.txt',
-        reduction='2008',wdir=maindir+'waveforms/',
-        event='2008_event.csv',filter_corner=0.055,filter_order=4,filter_type='low',
-        misfit_norm=2,taper_fade=2.0,weight=1.,base=0,sig_base=0,extension='',dist='Unif')
+    # waveforms(
+    #     network='stations.txt',
+    #     reduction='2008',wdir=maindir+'waveforms/',
+    #     event='2008_event.csv',filter_corner=0.055,filter_order=4,filter_type='low',
+    #     misfit_norm=2,taper_fade=2.0,weight=1.,base=0,sig_base=0,extension='',dist='Unif')
 ]
 
 # Optimisation
@@ -635,9 +630,10 @@ niter=1000 # number of sampling for exploration
 nburn=500 # number of burned sampled 
 
 
-# Define profile for plot?
-# Nothing done for the moment
-profile=profile(name='all',x=0,y=0,l=10000,w=1000,strike=0) 
+# Define profiles for InSAR plots
+profiles=[
+    profile(name='1',x=-13,y=-10,l=40,w=5,strike=108)
+    ] 
 
 
 # text files for plots in gmt format

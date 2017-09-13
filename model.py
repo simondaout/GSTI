@@ -2,6 +2,8 @@ import numpy as np
 from numpy.lib.stride_tricks import as_strided
 import math
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+import matplotlib.cm as cm
 import copy
 
 import pymc 
@@ -15,28 +17,8 @@ from readgmt import *
 
 from pyrocko import trace
 
-class profile:
-    def __init__(self,name='all',x=0,y=0,l=1000,w=1000,strike=0):
-        # profile parameters
-        self.name = name
-        self.x = x
-        self.y = y
-        self.l = l
-        self.w = w
-        self.strike=strike
-
-        # define new base 
-        d2r =  math.pi/180.
-        self.str = strike*d2r
-        self.s = [math.sin(self.str),math.cos(self.str),0]
-        self.n = [math.cos(self.str),-math.sin(self.str),0]
-
-        # define boundaries profile
-        self.ypmax,self.ypmin = self.l/2,self.l/2
-        self.xpmax,self.xpmin = self.w/2,self.w/2
-
 class inversion:
-    def __init__(self,kernels,basis,timeseries,stacks,seismo,profile,gmtfiles,
+    def __init__(self,kernels,basis,timeseries,stacks,seismo,profiles,gmtfiles,
         store_path='./',store=None,bounds=None,ref=[0,0]):
         
         self.kernels=flatten(kernels)
@@ -44,7 +26,7 @@ class inversion:
         self.timeseries=timeseries
         self.stacks=stacks
         self.seismo=seismo
-        self.profile = profile
+        self.profiles = profiles
         self.store_path=store_path
         self.store=store
         self.gmtfiles=gmtfiles
@@ -406,7 +388,6 @@ class inversion:
 
         return r
 
-
     # @theano.compile.ops.as_op(itypes=[t.lscalar],otypes=[t.dvector])
     def foward(self, theta):
         g = np.zeros((self.N))
@@ -626,7 +607,8 @@ class inversion:
             # print manifold.network
 
             if manifold.type=='InSAR':
-                fig, _ = plt.subplots(1,3,figsize=(12,4))
+                # fig, _ = plt.subplots(len(self.profiles),3,figsize=(12,4))
+                fig = plt.figure(figsize = (14,6))
 
                 vranges = [(manifold.gm[1::2].max(),
                     manifold.gm[1::2].min())]
@@ -637,7 +619,10 @@ class inversion:
                 lmax = np.abs([np.min(vranges), np.max(vranges)]).max()
                 levels = np.linspace(-lmax, lmax, 50)
 
-                ax = fig.axes[0]
+                ######## DATA ######################
+                # ax = fig.axes[0]
+                ax = fig.add_subplot(len(self.profiles)+1,3,1)
+
                 cmap = ax.tricontourf(manifold.x, manifold.y, manifold.d[1::2]-manifold.d[0::2],
                                 cmap='seismic', levels=levels)
 
@@ -662,8 +647,34 @@ class inversion:
                         ax.scatter(gps.x, gps.y, c = 'black', s = 40, marker = '^')
                         ax.text(gps.x+1,gps.y+1,gps.name,color='black',fontsize='x-small')
 
+                # plot profiles
+                for i in xrange(len(self.profiles)):
+                    pro = self.profiles[i]
+                    ax.plot(pro.xpro[:],pro.ypro[:],color = 'black',lw = 1.)
 
-                ax = fig.axes[1]
+                    # plot profile
+                    ax = fig.add_subplot(len(self.profiles)+1,3,3*(i+1)+1)
+                    # perpandicular and parallel components in the profile basis
+                    yp = (manifold.x-pro.x)*pro.n[0]+(manifold.y-pro.y)*pro.n[1]
+                    xp = (manifold.x-pro.x)*pro.s[0]+(manifold.y-pro.y)*pro.s[1]
+
+                    # select data enco;passing the profile
+                    index=np.nonzero((xp>pro.xpmax)|(xp<pro.xpmin)|(yp>pro.ypmax)|(yp<pro.ypmin))
+                    xpp,ypp,lp=np.delete(xp,index),np.delete(yp,index),np.delete(manifold.d[1::2]-manifold.d[0::2],index)
+                    norm = mcolors.Normalize(vmin=-lmax, vmax=lmax)
+                    m = cm.ScalarMappable(norm=norm,cmap='seismic')
+                    facel=m.to_rgba(lp)
+                    ax.scatter(ypp,lp,s = 5., marker='o', color=facel, label='Data: {}'.format(manifold.network))
+                    ax.grid(linestyle='-.')
+                    ax.legend(loc='best')
+                    ax.set_title('Profile {}'.format(pro.name))
+                    ax.set_ylabel('[m]')
+                    ax.set_xlabel('[km]')
+
+
+                ######## MODEL ######################
+                # ax = fig.axes[1]
+                ax = fig.add_subplot(len(self.profiles)+1,3,2)
                 cmap = ax.tricontourf(manifold.x, manifold.y, manifold.gm[1::2]-manifold.gm[0::2],
                                 cmap='seismic', levels=levels)
 
@@ -687,7 +698,32 @@ class inversion:
 
                 fig.colorbar(cmap, ax=ax, aspect=5)
 
-                ax = fig.axes[2]
+                # plot profiles
+                for i in xrange(len(self.profiles)):
+                    pro = self.profiles[i]
+                    ax.plot(pro.xpro[:],pro.ypro[:],color = 'black',lw = 1.)
+
+                    # plot profile
+                    ax = fig.add_subplot(len(self.profiles)+1,3,3*(i+1)+2)
+                    # perpandicular and parallel components in the profile basis
+                    yp = (manifold.x-pro.x)*pro.n[0]+(manifold.y-pro.y)*pro.n[1]
+                    xp = (manifold.x-pro.x)*pro.s[0]+(manifold.y-pro.y)*pro.s[1]
+                    # select data enco;passing the profile
+                    index=np.nonzero((xp>pro.xpmax)|(xp<pro.xpmin)|(yp>pro.ypmax)|(yp<pro.ypmin))
+                    xpp,ypp,lp=np.delete(xp,index),np.delete(yp,index),np.delete(manifold.gm[1::2]-manifold.gm[0::2],index)
+                    norm = mcolors.Normalize(vmin=-lmax, vmax=lmax)
+                    m = cm.ScalarMappable(norm=norm,cmap='seismic')
+                    facel=m.to_rgba(lp)
+                    ax.scatter(ypp,lp,s = 2., marker='o', color=facel)
+                    ax.grid(linestyle='-.')
+                    ax.legend(loc='best')
+                    ax.set_title('Profile {}'.format(pro.name))
+                    ax.set_ylabel('[m]')
+                    ax.set_xlabel('[km]')
+
+                ######## RESIDUAL ######################
+                # ax = fig.axes[2]
+                ax = fig.add_subplot(len(self.profiles)+1,3,3)
                 cmap = ax.tricontourf(manifold.x, manifold.y, manifold.res[1::2],
                                 cmap='seismic', levels=levels)
 
@@ -704,13 +740,65 @@ class inversion:
 
                 fig.colorbar(cmap, ax=ax, aspect=5)
 
+                # plot profiles
+                for i in xrange(len(self.profiles)):
+                    pro = self.profiles[i]
+                    ax.plot(pro.xpro[:],pro.ypro[:],color = 'black',lw = 1.)
+
+                    # plot profile
+                    ax = fig.add_subplot(len(self.profiles)+1,3,3*(i+1)+3)
+                    # perpandicular and parallel components in the profile basis
+                    yp = (manifold.x-pro.x)*pro.n[0]+(manifold.y-pro.y)*pro.n[1]
+                    xp = (manifold.x-pro.x)*pro.s[0]+(manifold.y-pro.y)*pro.s[1]
+                    # select data enco;passing the profile
+                    index=np.nonzero((xp>pro.xpmax)|(xp<pro.xpmin)|(yp>pro.ypmax)|(yp<pro.ypmin))
+                    xpp,ypp,lp=np.delete(xp,index),np.delete(yp,index),np.delete(manifold.res[1::2],index)
+                    norm = mcolors.Normalize(vmin=-lmax, vmax=lmax)
+                    m = cm.ScalarMappable(norm=norm,cmap='seismic')
+                    facel=m.to_rgba(lp)
+                    ax.scatter(ypp,lp,s = 2., marker='o', color=facel)
+                    ax.grid(linestyle='-.')
+                    ax.legend(loc='best')
+                    ax.set_title('Profile {}'.format(pro.name))
+                    ax.set_ylabel('[m]')
+                    ax.set_xlabel('[km]')
+
                 fig.tight_layout()
 
     def plot_waveforms(self):
         for i in xrange(self.Nwav):
             manifold = self.seismo[i]
             # trace.snuffle(manifold.traces)
-            trace.snuffle(manifold.syn,events=manifold.events)
+            trace.snuffle(manifold.syn+manifold.traces,events=manifold.events)
+
+class profile:
+    def __init__(self,name='all',x=0,y=0,l=1000,w=1000,strike=0):
+        # profile parameters
+        self.name = name
+        self.x = x
+        self.y = y
+        self.l = l
+        self.w = w
+        self.strike=strike
+
+        # define new base 
+        d2r =  math.pi/180.
+        self.str = strike*d2r
+        self.s = [math.sin(self.str),math.cos(self.str),0]
+        self.n = [math.cos(self.str),-math.sin(self.str),0]
+
+        # define boundaries profile
+        self.ypmax,self.ypmin = self.l/2,-self.l/2
+        self.xpmax,self.xpmin = self.w/2,-self.w/2     
+
+        # corners of the profile
+        self.xpro,self.ypro = np.zeros((7)),np.zeros((7))
+        self.xpro[:] = self.x-self.w/2*self.s[0]-self.l/2*self.n[0],self.x+self.w/2*self.s[0]-self.l/2*self.n[0],\
+        self.x+self.w/2*self.s[0]+self.l/2*self.n[0],self.x-self.w/2*self.s[0]+self.l/2*self.n[0],self.x-self.w/2*self.s[0]-self.l/2*self.n[0],\
+        self.x-self.l/2*self.n[0],self.x+self.l/2*self.n[0]
+        self.ypro[:] = self.y-self.w/2*self.s[1]-self.l/2*self.n[1],self.y+self.w/2*self.s[1]-self.l/2*self.n[1],\
+        self.y+self.w/2*self.s[1]+self.l/2*self.n[1],self.y-self.w/2*self.s[1]+self.l/2*self.n[1],self.y-self.w/2*self.s[1]-self.l/2*self.n[1],\
+        self.y-self.l/2*self.n[1],self.y+l/2*self.n[1]
 
 
 def plotgmt(gmtfiles, ax):
