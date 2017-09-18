@@ -561,7 +561,7 @@ coseismic(
     name='2009 event',
     structures=[
         segment(
-            name='zongwulong',ss=0.,ds=1,east=0,north=0,down=0,length=l09,width=W09,strike=0,dip=dip09,
+            name='zongwulong',ss=0.,ds=slip09,east=0,north=0,down=0,length=l09,width=W09,strike=0,dip=dip09,
             # if conncectivity, sig_strike, sig_down, sig_east, sig_north are automatically set to zero
             sig_ss=0.,sig_ds=1.,sig_east=100.,sig_north=100.,sig_down=100.,sig_length=0.,sig_width=0.,sig_strike=360.,sig_dip=0.,
             prior_dist='Unif',connectivity='xitieshan',conservation=False)
@@ -617,11 +617,12 @@ stacks=[
     ]
 
 seismo=[
-    # waveforms(
-    #     network='stations.txt',
-    #     reduction='2008',wdir=maindir+'waveforms/',
-    #     event='2008_event.csv',filter_corner=0.055,filter_order=4,filter_type='low',
-    #     misfit_norm=2,taper_fade=2.0,weight=1.,base=0,sig_base=0,extension='',dist='Unif')
+    waveforms(
+        network='stations.txt',
+        reduction='2008',wdir=maindir+'waveforms/',
+        event='2008_event.csv',filter_corner=0.055,filter_order=4,filter_type='low',
+        misfit_norm=2,taper_fade=2.0,weight=1.,base=0,sig_base=0,extension='',dist='Unif')
+    
     # waveforms(
     #     network='stations.txt',
     #     reduction='2009',wdir=maindir+'waveforms/',

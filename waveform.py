@@ -59,6 +59,7 @@ class waveforms:
         self.base_source.set_origin(origin.lat, origin.lon)
         # print util.time_to_str(self.base_source.time), events[0].lon, events[0].lat
         # sys.exit()
+        self.type = 'Waveform'
 
     def load(self,inv):
         # load the data as a pyrocko pile and reform them into an array of traces
@@ -87,7 +88,7 @@ class waveforms:
             # so we can use this later to define a cut-out window for the optimization:
             self.targets.append(target)
 
-        print len(self.traces), len(self.targets)
+        # print len(self.traces), len(self.targets)
 
         for station,tr,target in zip(stations_list,self.traces,self.targets):
             
@@ -95,7 +96,7 @@ class waveforms:
             store = engine.get_store(inv.store)
             # trace.snuffle(tr, events=self.events)
             arrival = store.t('P', self.base_source, target)  # expected P-wave arrival
-            print arrival
+            # print arrival
             tmin = self.base_source.time+arrival-15  # start 15s before theor. arrival
             tmax = self.base_source.time+arrival+15  # end 15s after theor. arrival
             # # print self.tmin,self.tmax

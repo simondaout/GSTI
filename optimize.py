@@ -125,7 +125,7 @@ inv.residual()
 inv.plot_ts_GPS()
 inv.plot_InSAR_maps()
 plt.show()
-# inv.plot_waveforms()
+inv.plot_waveforms()
 sys.exit()
 
 print
