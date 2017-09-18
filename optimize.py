@@ -122,11 +122,11 @@ inv.residual()
 # sys.exit()
 
 # plots
-# inv.plot_ts_GPS()
-# inv.plot_InSAR_maps()
-# plt.show()
-# # inv.plot_waveforms()
-# sys.exit()
+inv.plot_ts_GPS()
+inv.plot_InSAR_maps()
+plt.show()
+# inv.plot_waveforms()
+sys.exit()
 
 print
 print "---------------------------------------------------------------------------"

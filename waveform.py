@@ -87,7 +87,7 @@ class waveforms:
             # so we can use this later to define a cut-out window for the optimization:
             self.targets.append(target)
 
-        # print len(self.traces), len(self.targets)
+        print len(self.traces), len(self.targets)
 
         for station,tr,target in zip(stations_list,self.traces,self.targets):
             
