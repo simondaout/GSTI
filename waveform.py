@@ -78,6 +78,7 @@ class waveforms:
         self.targets = []
         self.tmin, self.tmax = [], []
         self.arrivals = []
+        self.names = []
 
         for station,tr in zip(stations_list,self.traces):  # iterate over all stations
             # print station.lat, station.lon
@@ -93,6 +94,7 @@ class waveforms:
             # Next we extract the expected arrival time for this station from the the store,
             # so we can use this later to define a cut-out window for the optimization:
             self.targets.append(target)
+            self.names.append(station.nsl()[1])
 
         # print len(self.traces), len(self.targets)
 

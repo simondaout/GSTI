@@ -1,6 +1,7 @@
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
 import math
+import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import matplotlib.cm as cm
@@ -18,7 +19,7 @@ from readgmt import *
 from pyrocko import trace
 
 class inversion:
-    def __init__(self,kernels,basis,timeseries,stacks,seismo,profiles,gmtfiles,
+    def __init__(self,kernels,basis,timeseries,stacks,seismo,profiles,gmtfiles,outdir,
         store_path='./',store=None,bounds=None,ref=[0,0]):
         
         self.kernels=flatten(kernels)
@@ -32,6 +33,7 @@ class inversion:
         self.gmtfiles=gmtfiles
         self.bnds=bounds
         self.ref=ref
+        self.outdir=outdir
 
         self.Mker = len(self.kernels)
         self.Mbasis = len(self.basis)
@@ -598,9 +600,10 @@ class inversion:
                         ax3.set_autoscalex_on(False)
                             
 
-                # fig.autofmt_xdate()
-                plt.title('Station {} time series'.format(point.name))
-                # fig.tight_layout()
+                    # fig.autofmt_xdate()
+                    plt.title('Station {} time series'.format(point.name))
+                    fig.savefig(self.outdir+'/gps/'+manifold.points[i].name+'.eps',format = 'EPS')
+                    # fig.tight_layout()
 
     def plot_InSAR_maps(self,nfigure):
         for n in xrange(self.Nstacks):
@@ -726,8 +729,14 @@ class inversion:
                 ######## RESIDUAL ######################
                 # ax = fig.axes[2]
                 ax = fig.add_subplot(len(self.profiles)+1,3,3)
-                cmap = ax.tricontourf(manifold.x, manifold.y, manifold.res[1::2],
-                                cmap='seismic', levels=levels)
+                # cmap = ax.tricontourf(manifold.x, manifold.y, manifold.res[1::2],
+                #                 cmap='seismic', levels=levels)
+                
+                norm = matplotlib.colors.Normalize(vmin=-lmax,vmax=lmax)
+                m = cm.ScalarMappable(norm=norm, cmap=cm.seismic)
+                m.set_array(manifold.res[1::2]-manifold.res[0::2])
+                facelos = m.to_rgba(manifold.res[1::2]-manifold.res[0::2])
+                ax.scatter(manifold.x, manifold.y, s=10, marker='o',color=facelos)
 
                 plotgmt(self.gmtfiles, ax)
 
@@ -766,6 +775,8 @@ class inversion:
                     ax.set_xlabel('[km]')
 
                 fig.tight_layout()
+                fig.savefig(self.outdir+'/insar/'+manifold.network+'.eps',format = 'EPS')
+
 
     def plot_snuffler(self):
         for i in xrange(self.Nwav):
@@ -778,6 +789,7 @@ class inversion:
         from pyrocko import util
         import matplotlib.dates as dates
         import datetime 
+        import os
         for i in xrange(self.Nwav):
             manifold = self.seismo[i]
             fig, axes = plt.subplots(manifold.Npoints, squeeze=True, sharex=True, num=nfigure, figsize = (14,6))
@@ -808,36 +820,51 @@ class inversion:
 
             
             axes[j].set_xlabel('Time [s]')
-            plt.suptitle('Waveform fits for' +' '+ str(manifold.phase) +'-Phase and component' +' ' + str(manifold.component))
-            # lgd = plt.legend((s1[0], s2[0], s3[0]), ('Data','Synthetic',str(manifold.phase)+'-onset'), loc='upper center', bbox_to_anchor=(0.5, -1.6),
-                # fancybox=True, shadow=True, ncol=5)
+            # plt.suptitle('Waveform fits for' +' '+ str(manifold.phase) +'-Phase and component' +' ' + str(manifold.component))
+            lgd = plt.legend((s1[0], s2[0], s3[0]), ('Data','Synthetic',str(manifold.phase)+'-onset'), loc='upper center', bbox_to_anchor=(0.5, -1.6),
+                fancybox=True, shadow=True, ncol=5)
+            time = util.time_to_str(manifold.base_source.time) 
+            plt.suptitle('Waveform fits for {} event '.format(time))
+            fig.savefig(self.outdir+'/wave/'+os.path.splitext(manifold.event)[0]+'.eps',format = 'EPS')
 
 
     def plot_stations(self,nfigure):
-        from mpl_toolkits.basemap import Basemap
-        width = 22000000
-        lats, lons = [], []
-        events_lat, events_lon = [], []
-        for i in xrange(self.Nwav):
-            manifold = self.seismo[i]
-            lats.append(map((lambda x: getattr(x,'lat')),manifold.targets))
-            lons.append(map((lambda x: getattr(x,'lon')),manifold.targets))
-            events_lat.append(map((lambda x: getattr(x,'lat')),manifold.events))
-            events_lon.append(map((lambda x: getattr(x,'lon')),manifold.events))
+        if self.Nwav>0:
+            from mpl_toolkits.basemap import Basemap
+            width = 22000000
+            lats, lons = [], []
+            events_lat, events_lon = [], []
+            names = []
+            for i in xrange(self.Nwav):
+                manifold = self.seismo[i]
+                lats.append(map((lambda x: getattr(x,'lat')),manifold.targets))
+                lons.append(map((lambda x: getattr(x,'lon')),manifold.targets))
+                events_lat.append(map((lambda x: getattr(x,'lat')),manifold.events))
+                events_lon.append(map((lambda x: getattr(x,'lon')),manifold.events))
+                names.append(manifold.names)
 
-        events_lat,events_lon = np.array(flatten(events_lat)),np.array(flatten(events_lon)) 
-        events_lat,events_lon = map(np.float,events_lat), map(np.float,events_lon)
-        lats,lons = np.array(flatten(lats)),np.array(flatten(lons))
+            events_lat,events_lon = np.array(flatten(events_lat)),np.array(flatten(events_lon))
+            names =  np.array(flatten(names))
+            events_lat,events_lon = map(np.float,events_lat), map(np.float,events_lon)
+            lats,lons = np.array(flatten(lats)),np.array(flatten(lons))
 
-        m = Basemap(width=width,height=width, projection='hammer',
-                lat_0=events_lat[0],lon_0=events_lon[0])
-        stat_x, stat_y = m(lons,lats)
-        event_x, event_y = m(events_lon,events_lat)
-        m.drawmapboundary(fill_color='#99ffff')
-        m.fillcontinents(color='lightgray',zorder=0)
-        m.scatter(stat_x,stat_y,10,marker='o',color='k')
-        m.scatter(event_x,event_y,30,marker='*',color='r')
-        plt.title('Stations (black) for Events (red)', fontsize=12)
+            m = Basemap(width=width,height=width, projection='hammer',
+                    lat_0=events_lat[0],lon_0=events_lon[0])
+
+            fig = plt.figure(nfigure,figsize=(10,8))
+
+            stat_x, stat_y = m(lons,lats)
+            event_x, event_y = m(events_lon,events_lat)
+            m.drawmapboundary(fill_color='#99ffff')
+            m.fillcontinents(color='lightgray',zorder=0)
+            m.scatter(stat_x,stat_y,10,marker='^',color='k')
+            m.scatter(event_x,event_y,30,marker='*',color='r')
+
+            for label, x, y in zip(names,stat_x,stat_y):
+                 plt.text(x,y,label)
+            
+            plt.title('Stations (black) for Events (red)', fontsize=12)
+            plt.savefig(self.outdir+'/wave/networkmap.eps',format = 'EPS')
 
 
 class profile:

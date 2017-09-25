@@ -350,6 +350,8 @@ for i in xrange(Ngps):
 
 # Add random noise
 print 'Add random noise to synthetic data'
+# sig_insar = 0.0 
+# sig_gps = 0.0 
 sig_insar = 0.005 
 sig_gps = 0.002 
 print 'sigmad_insar: {}, sigmad_gps: {}'.format(sig_insar,sig_gps)
@@ -554,7 +556,7 @@ coseismic(
             sig_ss=0.,sig_ds=0.,sig_east=0,sig_north=0,sig_down=0,sig_length=0.,sig_width=0.,sig_strike=0,sig_dip=0.,
             prior_dist='Unif',connectivity=False,conservation=False)
             ],
-    date=time08,
+    date=time08, # put here the GCMT time 
     sigmam=1.0,
     ),
 
@@ -567,7 +569,7 @@ coseismic(
             sig_ss=0.,sig_ds=1.,sig_east=100.,sig_north=100.,sig_down=100.,sig_length=0.,sig_width=0.,sig_strike=360.,sig_dip=0.,
             prior_dist='Unif',connectivity='xitieshan',conservation=False)
             ],
-    date=time09,
+    date=time09, # put here the GCMT time 
     sigmam=1.0)
     ]
 
@@ -593,7 +595,7 @@ timeseries=[
         dim=3, # [East, North, Down]: dim=3, [East, North]: dim =2
         wdir=maindir+'gps/',
         scale=1., # scale all values
-        weight=1./sig_gps, # give a weight to data set
+        weight=1., # give a weight to data set
         proj=[1.,1.,1.],
         extension='.neu',
         base=[0,0,0],
@@ -607,13 +609,13 @@ stacks=[
     insarstack(network='int_{}-{}.xylos'.format(dates[0],dates[1]),
             reduction='Int.1',wdir=maindir+'insar/',proj=projm,
             tmin= times[0], tmax=times[1], los=None,heading=None,
-            weight=1./sig_insar,scale=1.,base=[ramp1_b, ramp1_a, ramp1_c],sig_base=[0.,0.,0.],dist='Unif'),
+            weight=1.,scale=1.,base=[ramp1_b, ramp1_a, ramp1_c],sig_base=[0.,0.,0.],dist='Unif'),
             # weight=1./sig_insar,scale=1.,base=[0., 0., 0.],sig_base=[0.01,0.01,0.01],dist='Unif'),
 
     insarstack(network='int_{}-{}.xylos'.format(dates[2],dates[3]),
             reduction='Int.2',wdir=maindir+'insar/',proj=projm,
             tmin= times[2], tmax=times[3], los=None,heading=None,
-            weight=1./sig_insar,scale=1.,base=[ramp2_b, ramp2_a, ramp2_c],sig_base=[0.,0.,0.],dist='Unif'),
+            weight=1.,scale=1.,base=[ramp2_b, ramp2_a, ramp2_c],sig_base=[0.,0.,0.],dist='Unif'),
            # weight=1./sig_insar,scale=1.,base=[0., 0., 0.],sig_base=[0.01,0.01,0.01],dist='Unif'),
     ]
 
@@ -622,7 +624,7 @@ seismo=[
         network='stations.txt',
         reduction='2008',wdir=maindir+'waveforms/',event='2008_event.csv',
         phase='P',filter_corner=0.055,filter_order=4,filter_type='low',
-        misfit_norm=2,taper_fade=2.0,weight=1.,base=0,sig_base=0,extension='',dist='Unif')
+        misfit_norm=2,taper_fade=2.0,weight=1.,base=0,sig_base=0,extension='',dist='Unif'),
     
     # waveforms(
     #     network='stations.txt',

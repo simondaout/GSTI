@@ -86,6 +86,9 @@ if not os.path.exists(outpro):
 outstat = inv.outdir+'stat/'
 if not os.path.exists(outstat):
         os.makedirs(outstat)
+outwave = inv.outdir+'wave/'
+if not os.path.exists(outwave):
+        os.makedirs(outwave)
 
 
 inv = inversion(
@@ -98,6 +101,7 @@ profiles=profiles,
 store_path=store_path,
 store=store,
 gmtfiles=gmtfiles,
+outdir=outdir,
 bounds=bounds,
 ref=reference,
   )
@@ -123,13 +127,16 @@ inv.residual()
 
 # plots
 nfigure=0
+inv.plot_stations(nfigure)
+nfigure=2
+inv.plot_traces(nfigure)
+plt.show()
+sys.exit()
+nfigure=10
 inv.plot_ts_GPS(nfigure)
 nfigure=20
 inv.plot_InSAR_maps(nfigure)
 nfigure=40
-inv.plot_stations(nfigure)
-nfigure=50
-inv.plot_traces(nfigure)
 plt.show()
 # inv.plot_waveforms()
 sys.exit()
