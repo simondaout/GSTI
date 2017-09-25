@@ -23,7 +23,8 @@ from pyrocko import util, pile, model, config, trace, io, pile
 
 
 # define the Green Function store for the synthetic example
-store='global_2s_40km'
+# store='global_2s_40km'
+store='test'
 # if not os.path.exists(store):
 #     print 'Downloading gf store from reporisitory'
 #     ws.download_gf_store(site='kinherd', store_id=store)
@@ -585,9 +586,9 @@ basis=[
 # Define timeseries data set: time series will be clean temporally from basis functions
 timeseries=[
     gpstimeseries(
-        # network='synt_gps_km_short.txt',
+        network='synt_gps_km_short.txt',
         # reduction='SYNT', 
-        network='synt_gps_km.txt',
+        # network='synt_gps_km.txt',
         reduction='SYNT-DENSE', # directory where are the time series
         dim=3, # [East, North, Down]: dim=3, [East, North]: dim =2
         wdir=maindir+'gps/',
@@ -619,14 +620,14 @@ stacks=[
 seismo=[
     waveforms(
         network='stations.txt',
-        reduction='2008',wdir=maindir+'waveforms/',
-        event='2008_event.csv',filter_corner=0.055,filter_order=4,filter_type='low',
+        reduction='2008',wdir=maindir+'waveforms/',event='2008_event.csv',
+        phase='P',filter_corner=0.055,filter_order=4,filter_type='low',
         misfit_norm=2,taper_fade=2.0,weight=1.,base=0,sig_base=0,extension='',dist='Unif')
     
     # waveforms(
     #     network='stations.txt',
     #     reduction='2009',wdir=maindir+'waveforms/',
-    #     event='2009_event.csv',filter_corner=0.055,filter_order=4,filter_type='low',
+    #     event='2009_event.csv', phase='P',filter_corner=0.055,filter_order=4,filter_type='low',
     #     misfit_norm=2,taper_fade=2.0,weight=1.,base=0,sig_base=0,extension='',dist='Unif')
 ]
 

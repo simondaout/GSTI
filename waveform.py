@@ -14,14 +14,16 @@ from pyrocko import util, pile, model, config, trace, io, pile
 
 
 class waveforms:
-    def __init__(self,network,reduction,wdir,event,weight=1.,filter_corner=0.055,
-        filter_order=4,filter_type='low',misfit_norm=2,taper_fade=2.0,
+    def __init__(self,network,reduction,wdir,event,weight=1.,phase='P',component='Z',
+        filter_corner=0.055,filter_order=4,filter_type='low',misfit_norm=2,taper_fade=2.0,
         base=0,sig_base=0,extension='',dist='Unif'):
         
         self.network=network
         self.reduction=reduction
         self.wdir=wdir
         self.event = event
+        self.phase=phase
+        self.component=component
         self.filter_corner=filter_corner
         self.filter_order=filter_order
         self.filter_type=filter_type
@@ -51,8 +53,8 @@ class waveforms:
         self.events = []
         self.events.extend(model.load_events(filename=wdir+self.event))
         origin = gf.Source(
-            lat=self.events[0].lat,
-            lon=self.events[0].lon)
+            lat=np.float(self.events[0].lat),
+            lon=np.float(self.events[0].lon))
         # print util.time_to_str(events[0].time)
 
         self.base_source = gf.MTSource.from_pyrocko_event(self.events[0])
@@ -69,20 +71,24 @@ class waveforms:
         # load station file
         fname = self.wdir + self.network
         stations_list = model.load_stations(fname)
-        
+
+        for s in stations_list:
+            s.set_channels_by_name(*self.component.split())
+
         self.targets = []
         self.tmin, self.tmax = [], []
+        self.arrivals = []
 
         for station,tr in zip(stations_list,self.traces):  # iterate over all stations
             # print station.lat, station.lon
             target = Target(
-            lat = station.lat,  # station lat.
-            lon = station.lon,   # station lon.
+            lat = np.float(station.lat),  # station lat.
+            lon = np.float(station.lon),   # station lon.
             store_id = inv.store,   # The gf-store to be used for this target,
             # we can also employ different gf-stores for different targets.
             interpolation = 'multilinear',   # interp. method between gf cells
             quantity = 'displacement',   # wanted retrieved quantity
-            codes = station.nsl() + ('BHZ',))  # Station and network code
+            codes = station.nsl() + ('BH'+self.component,))  # Station and network code
 
             # Next we extract the expected arrival time for this station from the the store,
             # so we can use this later to define a cut-out window for the optimization:
@@ -95,7 +101,7 @@ class waveforms:
             engine = LocalEngine(store_superdirs=inv.store_path)
             store = engine.get_store(inv.store)
             # trace.snuffle(tr, events=self.events)
-            arrival = store.t('P', self.base_source, target)  # expected P-wave arrival
+            arrival = store.t(self.phase, self.base_source, target)  # expected P-wave arrival
             # print arrival
             tmin = self.base_source.time+arrival-15  # start 15s before theor. arrival
             tmax = self.base_source.time+arrival+15  # end 15s after theor. arrival
@@ -103,6 +109,7 @@ class waveforms:
             tr.chop(tmin=tmin, tmax=tmax)
             self.tmin.append(tmin)
             self.tmax.append(tmax)
+            self.arrivals.append(self.base_source.time+arrival)
 
         self.Npoints = len(self.targets)
         # data vector

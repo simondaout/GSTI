@@ -122,10 +122,16 @@ inv.residual()
 # sys.exit()
 
 # plots
-inv.plot_ts_GPS()
-inv.plot_InSAR_maps()
+nfigure=0
+inv.plot_ts_GPS(nfigure)
+nfigure=20
+inv.plot_InSAR_maps(nfigure)
+nfigure=40
+inv.plot_stations(nfigure)
+nfigure=50
+inv.plot_traces(nfigure)
 plt.show()
-inv.plot_waveforms()
+# inv.plot_waveforms()
 sys.exit()
 
 print

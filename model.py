@@ -538,7 +538,7 @@ class inversion:
             start+= self.manifolds[i].N
         return Cov
 
-    def plot_ts_GPS(self):
+    def plot_ts_GPS(self,nfigure):
         for n in xrange(self.Nts):
             manifold = self.timeseries[n]
             if manifold.type=='GPS':
@@ -548,7 +548,8 @@ class inversion:
                     gt = as_strided(manifold.gm[i*manifold.dim*point.Nt:(i+1)*manifold.dim*point.Nt])
                     rest = as_strided(manifold.res[i*manifold.dim*point.Nt:(i+1)*manifold.dim*point.Nt])
 
-                    fig=plt.figure(figsize=(18,7))
+                    fig=plt.figure(nfigure,figsize=(18,7))
+                    nfigure += 1
                     fig.subplots_adjust(hspace=0.7)
 
                     for j in xrange((manifold.dim)):
@@ -601,14 +602,15 @@ class inversion:
                 plt.title('Station {} time series'.format(point.name))
                 # fig.tight_layout()
 
-    def plot_InSAR_maps(self):
+    def plot_InSAR_maps(self,nfigure):
         for n in xrange(self.Nstacks):
             manifold = self.stacks[n]
             # print manifold.network
 
             if manifold.type=='InSAR':
                 # fig, _ = plt.subplots(len(self.profiles),3,figsize=(12,4))
-                fig = plt.figure(figsize = (14,6))
+                fig = plt.figure(nfigure,figsize = (14,6))
+                nfigure += 1
 
                 vranges = [(manifold.gm[1::2].max(),
                     manifold.gm[1::2].min())]
@@ -765,11 +767,78 @@ class inversion:
 
                 fig.tight_layout()
 
-    def plot_waveforms(self):
+    def plot_snuffler(self):
         for i in xrange(self.Nwav):
             manifold = self.seismo[i]
             # trace.snuffle(manifold.traces)
             trace.snuffle(manifold.syn+manifold.traces,events=manifold.events)
+
+    def plot_traces(self,nfigure):
+        import matplotlib.dates as mdates
+        from pyrocko import util
+        import matplotlib.dates as dates
+        import datetime 
+        for i in xrange(self.Nwav):
+            manifold = self.seismo[i]
+            fig, axes = plt.subplots(manifold.Npoints, squeeze=True, sharex=True, num=nfigure, figsize = (14,6))
+            nfigure += 1
+            fig.subplots_adjust(hspace=0)
+            plt.setp([a.get_xticklabels() for a in fig.axes[:-1]], visible=False)
+            for j in xrange(len(manifold.targets)):
+                tr = manifold.traces[j]
+                syn = manifold.syn[j]
+                arrival = manifold.arrivals[j]
+                # print arrival
+                # print util.time_to_str(arrival)
+                # print util.time_to_str(tr.get_xdata()[0])
+                # sys.exit()
+
+                target = manifold.targets[j]
+                t_arr = dates.date2num(datetime.datetime.strptime('{}'.format(util.time_to_str(arrival)),'%Y-%m-%d %H:%M:%S.%f'))
+                
+                time1 = [dates.date2num(datetime.datetime.strptime('{}'.format(d),'%Y-%m-%d %H:%M:%S.%f')) for d in map(util.time_to_str,tr.get_xdata())]
+                time2 = [dates.date2num(datetime.datetime.strptime('{}'.format(d),'%Y-%m-%d %H:%M:%S.%f')) for d in map(util.time_to_str,syn.get_xdata())]
+                s1=axes[j].plot(time1, tr.ydata, color='b')
+                s2=axes[j].plot(time2, syn.ydata, color='r')
+                s3=axes[j].plot([t_arr, t_arr], [np.min(tr.ydata), np.max(tr.ydata)], 'k-', lw=2)
+                axes[j].text(-.2,0.5,str(target.codes),transform=axes[j].transAxes)
+                axes[j].set_yticklabels([], visible=False)
+                axes[j].xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
+                axes[j].xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
+
+            
+            axes[j].set_xlabel('Time [s]')
+            plt.suptitle('Waveform fits for' +' '+ str(manifold.phase) +'-Phase and component' +' ' + str(manifold.component))
+            # lgd = plt.legend((s1[0], s2[0], s3[0]), ('Data','Synthetic',str(manifold.phase)+'-onset'), loc='upper center', bbox_to_anchor=(0.5, -1.6),
+                # fancybox=True, shadow=True, ncol=5)
+
+
+    def plot_stations(self,nfigure):
+        from mpl_toolkits.basemap import Basemap
+        width = 22000000
+        lats, lons = [], []
+        events_lat, events_lon = [], []
+        for i in xrange(self.Nwav):
+            manifold = self.seismo[i]
+            lats.append(map((lambda x: getattr(x,'lat')),manifold.targets))
+            lons.append(map((lambda x: getattr(x,'lon')),manifold.targets))
+            events_lat.append(map((lambda x: getattr(x,'lat')),manifold.events))
+            events_lon.append(map((lambda x: getattr(x,'lon')),manifold.events))
+
+        events_lat,events_lon = np.array(flatten(events_lat)),np.array(flatten(events_lon)) 
+        events_lat,events_lon = map(np.float,events_lat), map(np.float,events_lon)
+        lats,lons = np.array(flatten(lats)),np.array(flatten(lons))
+
+        m = Basemap(width=width,height=width, projection='hammer',
+                lat_0=events_lat[0],lon_0=events_lon[0])
+        stat_x, stat_y = m(lons,lats)
+        event_x, event_y = m(events_lon,events_lat)
+        m.drawmapboundary(fill_color='#99ffff')
+        m.fillcontinents(color='lightgray',zorder=0)
+        m.scatter(stat_x,stat_y,10,marker='o',color='k')
+        m.scatter(event_x,event_y,30,marker='*',color='r')
+        plt.title('Stations (black) for Events (red)', fontsize=12)
+
 
 class profile:
     def __init__(self,name='all',x=0,y=0,l=1000,w=1000,strike=0):
