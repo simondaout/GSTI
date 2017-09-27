@@ -67,6 +67,7 @@ class inversion:
             for kk in xrange(self.Mseg):
                 # print self.segments[k].connectivity, self.segments[kk].name
                 if self.segments[k].connectivity == self.segments[kk].name:
+                    self.segments[k].connectindex = kk
                     self.segments[k].connect(self.segments[kk])
 
         # print self.segments[1].connectivity
@@ -411,7 +412,7 @@ class inversion:
             # print 
             # print self.m[self.Msurface:]
             if (depth < 0.) or (width >= 2*depth):
-               print depth,width 
+               # print depth,width 
                return np.ones((self.N,))*1e14
 
         self.m = np.array(self.m)

@@ -29,11 +29,18 @@ class patch:
         self.connectivity=connectivity
         self.conservation=conservation
 
+        # initiate variable
+        self.connectindex = 0
+        # set uncertainties to 0 for connected patches
+        if self.connectivity is not False:
+            self.sstrike, self.sx3, self.sx2, self.sx1 = 0, 0, 0, 0
+
         # create model vector
         self.param = ['{} strike slip'.format(self.name),'{} dip slip'.format(self.name),\
         '{} north'.format(self.name),'{} east'.format(self.name),'{} down'.format(self.name),\
         '{} length'.format(self.name),'{} width'.format(self.name),'{} strike'.format(self.name),\
         '{} dip'.format(self.name)]
+        
         self.m = self.tolist()
         self.sigmam = self.sigtolist()
         # self.mmin = list(map(operator.sub, self.m, self.sigmam))
@@ -41,6 +48,7 @@ class patch:
 
         # number of parameters per patch
         self.Mpatch = len(self.m)
+
 
     def connect(self,seg):
         # set strike
@@ -56,11 +64,11 @@ class patch:
         self.x2,self.x1= seg.x2+east_shift, seg.x1+north_shift
 
         # set uncertainties to 0
-        self.sstrike, self.sx3, self.sx2, self.sx1 = 0, 0, 0, 0
+        # self.sstrike, self.sx3, self.sx2, self.sx1 = 0, 0, 0, 0
 
         # update m vector !!!! dangerous !!!!
         self.m = self.tolist()
-        self.sigmam = self.sigtolist()
+        # self.sigmam = self.sigtolist()
         
     def build_prior(self):
         self.sampled = []

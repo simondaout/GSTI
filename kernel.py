@@ -153,7 +153,7 @@ class interseismic(pattern):
           pattern.__init__(self,name,date,inversion_type,m,sigmam,prior_dist)
 
           self.seimo = False
-          self.t0=time2dec(date)
+          self.t0=time2dec(date)[0]
 
           # segments associated to kernel
           self.structures = structures 

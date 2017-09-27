@@ -164,6 +164,10 @@ class waveforms:
                 
                 # update patch parameter
                 seg.ss,seg.ds,seg.x1,seg.x2,seg.x3,seg.l,seg.w,seg.strike,seg.dip = mp
+                # construct connecivities
+                seg.connect(inv.segments[seg.connectindex])
+
+
                 seg.m = seg.tolist()
 
                 # update time event
