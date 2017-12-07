@@ -28,14 +28,13 @@ class insarpoint(point):
         self.Nt=2
 
 class insarstack:
-    def __init__(self,network,reduction,wdir,proj=None,los=None,heading=None,
+    def __init__(self,network,reduction,wdir,proj=None,los=None,
         tmin=0.,tmax=1.,weight=1.,scale=1.,base=[0,0,0],sig_base=[0,0,0],dist='Unif'):
 
         self.network=network
         self.reduction=reduction
         self.wdir=wdir
         self.los=los
-        self.heading=heading
         self.tmin=tmin
         self.tmax=tmax
         self.sigmad=1./weight
@@ -70,8 +69,8 @@ class insarstack:
 
         f=file(fname,'r')
         if self.los is not None:
-            # load x, y, los, incidence angle 
-            self.x,self.y,self.ulos,self.theta=np.loadtxt(f,comments='#',unpack=True,dtype='f,f,f,f')
+            # load x, y, los, theta, phi
+            self.x,self.y,self.ulos,self.theta, self.phi =np.loadtxt(f,comments='#',unpack=True,dtype='f,f,f,f,f')
 
             # ref to the center of the profile 
             # xp=(x-self.x0)*self.profile.s[0]+(y-self.y0)*self.profile.s[1]

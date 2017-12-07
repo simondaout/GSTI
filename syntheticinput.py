@@ -614,15 +614,15 @@ timeseries=[
 stacks=[
     insarstack(network='int_{}-{}.xylos'.format(dates[0],dates[1]),
             reduction='Int.1',wdir=maindir+'insar/',proj=projm,
-            tmin= times[0], tmax=times[1], los=None,heading=None,
-            weight=1.,scale=1.,base=[ramp1_b, ramp1_a, ramp1_c],sig_base=[0.,0.,0.],dist='Unif'),
-            # weight=1./sig_insar,scale=1.,base=[0., 0., 0.],sig_base=[0.01,0.01,0.01],dist='Unif'),
+            tmin= times[0], tmax=times[1], los=None,
+            # weight=1.,scale=1.,base=[ramp1_b, ramp1_a, ramp1_c],sig_base=[0.,0.,0.],dist='Unif'),
+            weight=1./sig_insar,scale=1.,base=[0., 0., 0.],sig_base=[0.01,0.01,0.01],dist='Unif'),
 
     insarstack(network='int_{}-{}.xylos'.format(dates[2],dates[3]),
             reduction='Int.2',wdir=maindir+'insar/',proj=projm,
-            tmin= times[2], tmax=times[3], los=None,heading=None,
-            weight=1.,scale=1.,base=[ramp2_b, ramp2_a, ramp2_c],sig_base=[0.,0.,0.],dist='Unif'),
-            # weight=1./sig_insar,scale=1.,base=[0., 0., 0.],sig_base=[0.01,0.01,0.01],dist='Unif'),
+            tmin= times[2], tmax=times[3], los=None,
+            # weight=1.,scale=1.,base=[ramp2_b, ramp2_a, ramp2_c],sig_base=[0.,0.,0.],dist='Unif'),
+            weight=1./sig_insar,scale=1.,base=[0., 0., 0.],sig_base=[0.01,0.01,0.01],dist='Unif'),
     ]
 
 seismo=[

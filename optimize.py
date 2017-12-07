@@ -125,18 +125,18 @@ inv.build_gm()
 inv.residual()
 
 # # plots
-nfigure=0
-inv.plot_stations(nfigure)
-nfigure=2
-inv.plot_traces(nfigure)
-nfigure=10
-inv.plot_ts_GPS(nfigure)
-nfigure=20
-inv.plot_InSAR_maps(nfigure)
-nfigure=40
-plt.show()
+# nfigure=0
+# inv.plot_stations(nfigure)
+# nfigure=2
+# inv.plot_traces(nfigure)
+# nfigure=10
+# inv.plot_ts_GPS(nfigure)
+# nfigure=20
+# inv.plot_InSAR_maps(nfigure)
+# nfigure=40
+# plt.show()
 # inv.plot_snuffler()
-sys.exit()
+# sys.exit()
 
 print
 print "---------------------------------------------------------------------------"
