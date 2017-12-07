@@ -69,6 +69,7 @@ class inversion:
                 if self.segments[k].connectivity == self.segments[kk].name:
                     self.segments[k].connectindex = kk
                     self.segments[k].connect(self.segments[kk])
+                    # sys.exit()
 
         # print self.segments[1].connectivity
         # print self.segments[0].name
@@ -689,10 +690,12 @@ class inversion:
                 ax.set_xlabel('[km]')
                 ax.set_ylabel('[km]')
 
+
                 for seg in self.segments:
                     # fe,fn = source.outline.T
                     # ax.fill(fe, fn, color=(0.5, 0.5, 0.5), alpha=0.5)
                     fn, fe = seg.source.outline(cs='xy').T/1000
+                    # print seg.source
                     ax.fill(fe, fn, color=(0.5, 0.5, 0.5), alpha=0.5)
                     ax.plot(fe[:2],fn[:2],linewidth=2.,color='black',alpha=0.5)
 
@@ -764,7 +767,7 @@ class inversion:
                     xp = (manifold.x-pro.x)*pro.s[0]+(manifold.y-pro.y)*pro.s[1]
                     # select data enco;passing the profile
                     index=np.nonzero((xp>pro.xpmax)|(xp<pro.xpmin)|(yp>pro.ypmax)|(yp<pro.ypmin))
-                    xpp,ypp,lp=np.delete(xp,index),np.delete(yp,index),np.delete(manifold.res[1::2],index)
+                    xpp,ypp,lp=np.delete(xp,index),np.delete(yp,index),np.delete(manifold.res[1::2]-manifold.res[0::2],index)
                     norm = mcolors.Normalize(vmin=-lmax, vmax=lmax)
                     m = cm.ScalarMappable(norm=norm,cmap='seismic')
                     facel=m.to_rgba(lp)

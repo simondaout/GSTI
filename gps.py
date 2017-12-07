@@ -222,7 +222,8 @@ class gpstimeseries:
                     # update patch parameter
                     seg.ss,seg.ds,seg.x1,seg.x2,seg.x3,seg.l,seg.w,seg.strike,seg.dip = mpp
                     # construct connecivities
-                    seg.connect(inv.segments[seg.connectindex])
+                    if seg.connectivity is not False:
+                        seg.connect(inv.segments[seg.connectindex])
                     seg.m = seg.tolist()
                     # print seg.info()
 

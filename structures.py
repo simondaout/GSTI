@@ -28,7 +28,6 @@ class patch:
         self.dist=dist
         self.connectivity=connectivity
         self.conservation=conservation
-
         # initiate variable
         self.connectindex = 0
         # set uncertainties to 0 for connected patches

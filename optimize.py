@@ -123,23 +123,20 @@ m_init = inv.build_prior()
 ### TESTING ###
 inv.build_gm()
 inv.residual()
-# sys.exit()
 
 # # plots
-# nfigure=0
-# inv.plot_stations(nfigure)
-# nfigure=2
-# inv.plot_traces(nfigure)
-# plt.show()
-# sys.exit()
-# nfigure=10
-# inv.plot_ts_GPS(nfigure)
-# nfigure=20
-# inv.plot_InSAR_maps(nfigure)
-# nfigure=40
-# plt.show()
-# # inv.plot_snuffler()
-# sys.exit()
+nfigure=0
+inv.plot_stations(nfigure)
+nfigure=2
+inv.plot_traces(nfigure)
+nfigure=10
+inv.plot_ts_GPS(nfigure)
+nfigure=20
+inv.plot_InSAR_maps(nfigure)
+nfigure=40
+plt.show()
+# inv.plot_snuffler()
+sys.exit()
 
 print
 print "---------------------------------------------------------------------------"

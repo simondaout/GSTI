@@ -300,9 +300,9 @@ components = result_2009.keys()
 result_2008 = result_2008.results_list[0][0].result
 
 # create fake interseismic surface displacements 
-vint = -0.004
+# vint = -0.004
 # ie.e TS clean form interseismic trend
-# vint = 0.0
+vint = 0.0
 disp[:Ninsar,0] = vint*tint1
 disp[Ninsar:2*Ninsar,0] = vint*tint2 
 
@@ -485,7 +485,7 @@ if plotdata==True:
 ##############################################
 
 # # save interferograms
-savedata = False # if True: save synthetic data
+savedata = False  # if True: save synthetic data
 
 if savedata==True:
 
@@ -554,7 +554,7 @@ coseismic(
         segment(
             # name='xitieshan',ss=0.,ds=slip08,east=east08,north=north08,down=d08,length=l08,width=W08,strike=strike08,dip=dip08,
             # sig_ss=0.,sig_ds=0.,sig_east=0,sig_north=0,sig_down=0,sig_length=0.,sig_width=0.,sig_strike=0,sig_dip=0.,
-            name='xitieshan',ss=0.,ds=1,east=east08,north=north08,down=d08,length=l08,width=W08,strike=strike08,dip=dip08,
+            name='xitieshan',ss=0.,ds=slip08,east=east08,north=north08,down=d08,length=l08,width=W08,strike=strike08,dip=dip08,
             sig_ss=0.,sig_ds=1.,sig_east=0,sig_north=0,sig_down=0,sig_length=10.,sig_width=5.,sig_strike=0,sig_dip=0.,
             prior_dist='Unif',connectivity=False,conservation=False)
             ],
@@ -566,10 +566,10 @@ coseismic(
     name='2009 event',
     structures=[
         segment(
-            # name='zongwulong',ss=0.,ds=slip09,east=0,north=0,down=0,length=l09,width=W09,strike=0,dip=dip09,
+            # name='zongwulong',ss=0.,ds=slip09,east=east09,north=north09,down=d09,length=l09,width=W09,strike=strike09,dip=dip09,
             # if conncectivity, sig_strike, sig_down, sig_east, sig_north are automatically set to zero
-            # sig_ss=0.,sig_ds=1.,sig_east=100.,sig_north=100.,sig_down=100.,sig_length=0.,sig_width=0.,sig_strike=360.,sig_dip=0.,
-            # prior_dist='Unif',connectivity='xitieshan',conservation=False),
+            # sig_ss=0.,sig_ds=1.,sig_east=0.,sig_north=0.,sig_down=0.,sig_length=0.,sig_width=0.,sig_strike=0.,sig_dip=0.,
+            # prior_dist='Unif',connectivity=False,conservation=False),
             name='zongwulong',ss=0.,ds=1,east=0,north=0,down=0,length=l09,width=W09,strike=0,dip=dip09,
             sig_ss=0.,sig_ds=1.,sig_east=100.,sig_north=100.,sig_down=100.,sig_length=0.,sig_width=0.,sig_strike=360.,sig_dip=0.,
             prior_dist='Unif',connectivity='xitieshan',conservation=False)
@@ -583,7 +583,7 @@ coseismic(
 time0 = '2005-01-01 00:00:0.0' 
 basis=[
 # coseismic(name='coseismic', date=t08, m=0., sigmam=0.1),
-interseismic(name='interseismic', date=time0, m=0, sigmam=0.1),
+# sinterseismic(name='interseismic', date=time0, m=0, sigmam=0.1),
 # interseismic(name='interseismic', date=t0, m=vint, sigmam=0., prior_dist='Unif'),
 # postseismic(tini = t09, tend= t09+1., Mfunc=1, m=vpost, sigmam=0)
 ]  
@@ -615,28 +615,28 @@ stacks=[
     insarstack(network='int_{}-{}.xylos'.format(dates[0],dates[1]),
             reduction='Int.1',wdir=maindir+'insar/',proj=projm,
             tmin= times[0], tmax=times[1], los=None,heading=None,
-            # weight=1.,scale=1.,base=[ramp1_b, ramp1_a, ramp1_c],sig_base=[0.,0.,0.],dist='Unif'),
-            weight=1./sig_insar,scale=1.,base=[0., 0., 0.],sig_base=[0.01,0.01,0.01],dist='Unif'),
+            weight=1.,scale=1.,base=[ramp1_b, ramp1_a, ramp1_c],sig_base=[0.,0.,0.],dist='Unif'),
+            # weight=1./sig_insar,scale=1.,base=[0., 0., 0.],sig_base=[0.01,0.01,0.01],dist='Unif'),
 
     insarstack(network='int_{}-{}.xylos'.format(dates[2],dates[3]),
             reduction='Int.2',wdir=maindir+'insar/',proj=projm,
             tmin= times[2], tmax=times[3], los=None,heading=None,
-            # weight=1.,scale=1.,base=[ramp2_b, ramp2_a, ramp2_c],sig_base=[0.,0.,0.],dist='Unif'),
-           weight=1./sig_insar,scale=1.,base=[0., 0., 0.],sig_base=[0.01,0.01,0.01],dist='Unif'),
+            weight=1.,scale=1.,base=[ramp2_b, ramp2_a, ramp2_c],sig_base=[0.,0.,0.],dist='Unif'),
+            # weight=1./sig_insar,scale=1.,base=[0., 0., 0.],sig_base=[0.01,0.01,0.01],dist='Unif'),
     ]
 
 seismo=[
-    waveforms(
-        network='stations.txt',
-        reduction='2008',wdir=maindir+'waveforms/',event='2008_event.csv',
-        phase='P',filter_corner=0.055,filter_order=4,filter_type='low',
-        misfit_norm=2,taper_fade=2.0,weight=1.,base=0,sig_base=0,extension='',dist='Unif'),
+    # waveforms(
+    #     network='stations.txt',
+    #     reduction='2008',wdir=maindir+'waveforms/',event='2008_event.csv',
+    #     phase='P',filter_corner=0.055,filter_order=4,filter_type='low',
+    #     misfit_norm=2,taper_fade=2.0,weight=1.,base=0,sig_base=0,extension='',dist='Unif'),
     
-    waveforms(
-        network='stations.txt',
-        reduction='2009',wdir=maindir+'waveforms/',
-        event='2009_event.csv', phase='P',filter_corner=0.055,filter_order=4,filter_type='low',
-        misfit_norm=2,taper_fade=2.0,weight=1.,base=0,sig_base=0,extension='',dist='Unif')
+    # waveforms(
+    #     network='stations.txt',
+    #     reduction='2009',wdir=maindir+'waveforms/',
+    #     event='2009_event.csv', phase='P',filter_corner=0.055,filter_order=4,filter_type='low',
+    #     misfit_norm=2,taper_fade=2.0,weight=1.,base=0,sig_base=0,extension='',dist='Unif')
 ]
 
 # Optimisation
