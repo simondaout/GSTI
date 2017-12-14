@@ -6,15 +6,15 @@ import matplotlib.pyplot as plt
 import pymc
 
 # GSti dependencies
-from kernel import *
-from model import *
-from gps import *
-from insar import *
-from structures import *
-from readgmt import *
-from combisource import *
-from waveform import *
-from date2dec import *
+from GSTI.kernel import *
+from GSTI.model import *
+from GSTI.gps import *
+from GSTI.insar import *
+from GSTI.structures import *
+from GSTI.readgmt import *
+from GSTI.combisource import *
+from GSTI.waveform import *
+from GSTI.date2dec import *
 
 # pyrcoko dependencies
 from pyrocko.gf import LocalEngine, StaticTarget, SatelliteTarget,\

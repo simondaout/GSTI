@@ -14,7 +14,7 @@ import numpy as np
 import math
 
 from os import path, environ
-from sys import argv,exit,stdin,stdout
+from sys import argv, exit, stdin, stdout
 
 import getopt
 import time

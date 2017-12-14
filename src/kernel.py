@@ -1,8 +1,8 @@
 import numpy as np
 import math,sys
 from matplotlib import pyplot as plt
-from flatten import *
-from date2dec import *
+from GSTI.flatten import *
+from GSTI.date2dec import *
 
 from pyrocko import util
 

@@ -4,9 +4,8 @@ from numpy.lib.stride_tricks import as_strided
 from os import path
 import sys
 
-from date2dec import *
-
-from flatten import *
+from GSTI.date2dec import *
+from GSTI.flatten import *
 
 from pyrocko.gf import SatelliteTarget,Target,LocalEngine
 from pyrocko import gf, moment_tensor as mtm, trace

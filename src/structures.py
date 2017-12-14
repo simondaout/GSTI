@@ -3,7 +3,7 @@ import math,sys
 import pymc
 import operator
 
-from flatten import *
+from GSTI.flatten import *
 
 from pyrocko import gf, util
 from pyrocko.guts import List

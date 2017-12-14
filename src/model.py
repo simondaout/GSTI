@@ -12,9 +12,9 @@ import pymc
 # import theano.tensor as t
 
 # dependancies
-from model import *
-from flatten import *
-from readgmt import *
+from GSTI.model import *
+from GSTI.flatten import *
+from GSTI.readgmt import *
 
 from pyrocko import trace
 
