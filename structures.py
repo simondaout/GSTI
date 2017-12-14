@@ -48,7 +48,6 @@ class patch:
         # number of parameters per patch
         self.Mpatch = len(self.m)
 
-
     def connect(self,seg):
         # set strike
         self.strike= seg.strike
@@ -114,9 +113,11 @@ class patch:
         return [self.sss,self.sds,self.sx1,self.sx2,self.sx3,self.sl,
         self.sw,int(self.sstrike),int(self.sdip)]
 
-    def engine(self,target,store,store_path,ref):
+    def loadEngine(self, store, store_path):
+        # load engine
+        self.eng = LocalEngine(store_superdirs=store_path,default_store_id=store)
 
-        engine = LocalEngine(store_superdirs=store_path,default_store_id=store)
+    def engine(self,target,ref):
 
         # print store_path, store
         # print ref[0], ref[1]
@@ -138,7 +139,7 @@ class patch:
             anchor='top')
         # print self.source
 
-        return engine.process(self.source, target)
+        return self.eng.process(self.source, target)
 
 class segment:
     def __init__(self,name,ss,ds,east,north,down,length,width,strike,dip,

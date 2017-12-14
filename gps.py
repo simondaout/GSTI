@@ -228,7 +228,7 @@ class gpstimeseries:
                     # print seg.info()
 
                     # call pyrocko engine
-                    disp = seg.engine(satellite_targets, inv.store, inv.store_path, inv.ref).\
+                    disp = seg.engine(satellite_targets, inv.ref).\
                     results_list[0][0].result
                     # print disp
                     # extract desired components

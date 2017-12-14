@@ -70,6 +70,8 @@ class inversion:
                     self.segments[k].connectindex = kk
                     self.segments[k].connect(self.segments[kk])
                     # sys.exit()
+                # load local engine
+                self.segments[k].loadEngine(self.store, self.store_path)
 
         # print self.segments[1].connectivity
         # print self.segments[0].name

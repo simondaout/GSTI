@@ -174,7 +174,7 @@ class waveforms:
                 # update time event
                 seg.time += self.base
 
-                synt_traces = seg.engine(self.targets,inv.store, inv.store_path, inv.ref).\
+                synt_traces = seg.engine(self.targets, inv.ref).\
                 pyrocko_traces() 
                 # for syn,tr in zip(synt_traces,self.traces):
                 # print len(syn.ydata), len(tr.ydata)

@@ -570,8 +570,8 @@ coseismic(
             # if conncectivity, sig_strike, sig_down, sig_east, sig_north are automatically set to zero
             # sig_ss=0.,sig_ds=1.,sig_east=0.,sig_north=0.,sig_down=0.,sig_length=0.,sig_width=0.,sig_strike=0.,sig_dip=0.,
             # prior_dist='Unif',connectivity=False,conservation=False),
-            name='zongwulong',ss=0.,ds=1,east=0,north=0,down=0,length=l09,width=W09,strike=0,dip=dip09,
-            sig_ss=0.,sig_ds=1.,sig_east=100.,sig_north=100.,sig_down=100.,sig_length=0.,sig_width=0.,sig_strike=360.,sig_dip=0.,
+            name='zongwulong',ss=0.,ds=slip09,east=0,north=0,down=0,length=l09,width=W09,strike=0,dip=dip09,
+            sig_ss=0.,sig_ds=0.,sig_east=100.,sig_north=100.,sig_down=100.,sig_length=0.,sig_width=0.,sig_strike=360.,sig_dip=0.,
             prior_dist='Unif',connectivity='xitieshan',conservation=False)
             ],
     date=time09, # put here the GCMT time 

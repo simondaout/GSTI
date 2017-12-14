@@ -135,7 +135,7 @@ inv.residual()
 # inv.plot_InSAR_maps(nfigure)
 # nfigure=40
 # plt.show()
-# inv.plot_snuffler()
+# # inv.plot_snuffler()
 # sys.exit()
 
 print

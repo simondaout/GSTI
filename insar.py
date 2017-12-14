@@ -221,7 +221,7 @@ class insarstack:
                 # print seg.info()
 
                 # call pyrocko engine and extract los component
-                disp = seg.engine(satellite_targets, inv.store, inv.store_path, inv.ref).\
+                disp = seg.engine(satellite_targets, inv.ref).\
                 results_list[0][0].result['displacement.los']
                 # print disp
 
