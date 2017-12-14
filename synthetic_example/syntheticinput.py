@@ -23,7 +23,7 @@ from pyrocko import util, pile, model, config, trace, io, pile
 
 
 # define the Green Function store for the synthetic example
-store='global_2s_40km'
+store='ak135_static'
 # store='test'
 # if not os.path.exists(store):
 #     print 'Downloading gf store from reporisitory'
@@ -36,7 +36,7 @@ ref_lat,ref_lon = 37.6, 95.9
 ############ CREATE SYNTHETIC EXAMPLE ###############
 #####################################################
 
-engine = LocalEngine(store_superdirs=store_path,default_store_id=store)
+engine = LocalEngine(store_superdirs=store_path, default_store_id=store, use_config=True)
 
 ##############################################
 #            Targets                         #
@@ -217,46 +217,46 @@ result_2009 = engine.process(sources, [satellite_target])
 # 2008 event
 # We load the refrence event from a event file. This source will be used to
 # retrieve the expected arrival times.
-events = []
-events.extend(model.load_events(filename='./synthetic_example/waveforms/2008_event.csv'))
-event = events[0]
-origin = gf.Source(
-    lat=event.lat,
-    lon=event.lon)
-base_source = gf.MTSource.from_pyrocko_event(event)
-base_source.set_origin(origin.lat, origin.lon)
+# events = []
+# events.extend(model.load_events(filename='./synthetic_example/waveforms/2008_event.csv'))
+# event = events[0]
+# origin = gf.Source(
+#     lat=event.lat,
+#     lon=event.lon)
+# base_source = gf.MTSource.from_pyrocko_event(event)
+# base_source.set_origin(origin.lat, origin.lon)
 
-# Next follows the loading of the stations and init of targets.
-# We use the term target for a single component of a single station
-fn_stations = './synthetic_example/waveforms/stations.txt' 
-# fn_stations = './synthetic_example/waveforms/stations_short.txt'  
-stations_list = model.load_stations(fn_stations)  # load the stations file
-# for s in stations_list:
-#     s.set_channels_by_name(*'Z'.split())
-# stations = {}
-# print stations
+# # Next follows the loading of the stations and init of targets.
+# # We use the term target for a single component of a single station
+# fn_stations = './synthetic_example/waveforms/stations.txt' 
+# # fn_stations = './synthetic_example/waveforms/stations_short.txt'  
+# stations_list = model.load_stations(fn_stations)  # load the stations file
+# # for s in stations_list:
+# #     s.set_channels_by_name(*'Z'.split())
+# # stations = {}
+# # print stations
 
-# we would also iterate over the components for each station.
-targets=[]
-for station in stations_list:  # iterate over all stations
-    target = Target(
-            lat=station.lat,  # station lat.
-            lon=station.lon,   # station lon.
-            store_id=store,   # The gf-store to be used for this target,
-            # we can also employ different gf-stores for different targets.
-            interpolation='multilinear',   # interp. method between gf cells
-            quantity='displacement',   # wanted retrieved quantity
-            codes=station.nsl() + ('BHZ',))  # Station and network code
+# # we would also iterate over the components for each station.
+# targets=[]
+# for station in stations_list:  # iterate over all stations
+#     target = Target(
+#             lat=station.lat,  # station lat.
+#             lon=station.lon,   # station lon.
+#             store_id=store,   # The gf-store to be used for this target,
+#             # we can also employ different gf-stores for different targets.
+#             interpolation='multilinear',   # interp. method between gf cells
+#             quantity='displacement',   # wanted retrieved quantity
+#             codes=station.nsl() + ('BHZ',))  # Station and network code
 
-    targets.append(target)  # append all singular targets in a list
+#     targets.append(target)  # append all singular targets in a list
 
-response = engine.process(co2008, targets)
-# And then we reform the response into traces:
-synthetic_traces_08 = response.pyrocko_traces()
+# response = engine.process(co2008, targets)
+# # And then we reform the response into traces:
+# synthetic_traces_08 = response.pyrocko_traces()
 
-response = engine.process(co2009, targets)
-# And then we reform the response into traces:
-synthetic_traces_09 = response.pyrocko_traces()
+# response = engine.process(co2009, targets)
+# # And then we reform the response into traces:
+# synthetic_traces_09 = response.pyrocko_traces()
 
 ##############################################
 #   Create synthetic Geodetic time series    #
@@ -465,7 +465,7 @@ if plotdata==True:
     fig, _ = plt.subplots(4,1,figsize=(10,6))
     # plot first GPS station surface displacements
     comps = ['los','east','down','north']
-    ymin,ymax = 0.1, -0.1
+    ymin, ymax = 0.1, -0.1
     for i, ax, dspl in zip(np.arange(4),fig.axes,comps):
         ax.plot(t,disp[2*Ninsar+len(t)*0:2*Ninsar+len(t)*1,i])
         ax.set_ylim([ymin,ymax])
@@ -548,35 +548,76 @@ reference = [ref_lon,ref_lat]
 # Each functions have seral structures as attribute
 # One structure can be made of several segments with connectivity and kinematic conservation properties
 kernels=[
-coseismic(
-    name='2008 event',
-    structures=[
-        segment(
-            # name='xitieshan',ss=0.,ds=slip08,east=east08,north=north08,down=d08,length=l08,width=W08,strike=strike08,dip=dip08,
-            # sig_ss=0.,sig_ds=0.,sig_east=0,sig_north=0,sig_down=0,sig_length=0.,sig_width=0.,sig_strike=0,sig_dip=0.,
-            name='xitieshan',ss=0.,ds=slip08,east=east08,north=north08,down=d08,length=l08,width=W08,strike=strike08,dip=dip08,
-            sig_ss=0.,sig_ds=1.,sig_east=0,sig_north=0,sig_down=0,sig_length=10.,sig_width=5.,sig_strike=0,sig_dip=0.,
-            prior_dist='Unif',connectivity=False,conservation=False)
-            ],
+    coseismic(
+        name='2008 event',
+        structures=[
+            segment(
+                # name='xitieshan',ss=0.,ds=slip08,east=east08,north=north08,down=d08,length=l08,width=W08,strike=strike08,dip=dip08,
+                # sig_ss=0.,sig_ds=0.,sig_east=0,sig_north=0,sig_down=0,sig_length=0.,sig_width=0.,sig_strike=0,sig_dip=0.,
+                name='xitieshan',
+                ss=0.,
+                ds=1.,
+                east=east08,
+                north=north08,
+                down=d08,
+                length=l08,
+                width=W08,
+                strike=strike08,
+                dip=dip08,
+
+                sig_ss=0.,
+                sig_ds=1.,
+                sig_east=0,
+                sig_north=0,
+                sig_down=0,
+                sig_length=0.,
+                sig_width=0.,
+                sig_strike=0,
+                sig_dip=0.,
+
+                prior_dist='Unif',
+                connectivity=False,
+                conservation=False)
+                ],
     date=time08, # put here the GCMT time 
     sigmam=1.0,
     ),
+    coseismic(
+        name='2009 event',
+        structures=[
+            segment(
+                # name='zongwulong',ss=0.,ds=slip09,east=east09,north=north09,down=d09,length=l09,width=W09,strike=strike09,dip=dip09,
+                # if conncectivity, sig_strike, sig_down, sig_east, sig_north are automatically set to zero
+                # sig_ss=0.,sig_ds=1.,sig_east=0.,sig_north=0.,sig_down=0.,sig_length=0.,sig_width=0.,sig_strike=0.,sig_dip=0.,
+                # prior_dist='Unif',connectivity=False,conservation=False),
+                name='zongwulong',
+                ss=0.,
+                ds=1.,
+                east=0,
+                north=0,
+                down=0,
+                length=l09,
+                width=W09,
+                strike=0,
+                dip=dip09,
 
-coseismic(
-    name='2009 event',
-    structures=[
-        segment(
-            # name='zongwulong',ss=0.,ds=slip09,east=east09,north=north09,down=d09,length=l09,width=W09,strike=strike09,dip=dip09,
-            # if conncectivity, sig_strike, sig_down, sig_east, sig_north are automatically set to zero
-            # sig_ss=0.,sig_ds=1.,sig_east=0.,sig_north=0.,sig_down=0.,sig_length=0.,sig_width=0.,sig_strike=0.,sig_dip=0.,
-            # prior_dist='Unif',connectivity=False,conservation=False),
-            name='zongwulong',ss=0.,ds=slip09,east=0,north=0,down=0,length=l09,width=W09,strike=0,dip=dip09,
-            sig_ss=0.,sig_ds=0.,sig_east=100.,sig_north=100.,sig_down=100.,sig_length=0.,sig_width=0.,sig_strike=360.,sig_dip=0.,
-            prior_dist='Unif',connectivity='xitieshan',conservation=False)
-            ],
+                sig_ss=0.,
+                sig_ds=1.,
+                sig_east=100.,
+                sig_north=100.,
+                sig_down=100.,
+                sig_length=0.,
+                sig_width=0.,
+                sig_strike=360.,
+                sig_dip=0.,
+
+                prior_dist='Unif',
+                connectivity='xitieshan',
+                conservation=False)
+                ],
     date=time09, # put here the GCMT time 
     sigmam=1.0)
-    ]
+]
 
 # Define Temporal functions
 # Dictionary of available functions: coseismic(), interseismic(), postseismic, seasonal(), ref()
@@ -612,17 +653,34 @@ timeseries=[
 # Define stack data set: velcoity maps, average displacements GPS vectors, interferograms, ect...
 # Cannot be clean from temporal basis functions
 stacks=[
-    insarstack(network='int_{}-{}.xylos'.format(dates[0],dates[1]),
-            reduction='Int.1',wdir=maindir+'insar/',proj=projm,
-            tmin= times[0], tmax=times[1], los=None,
-            # weight=1.,scale=1.,base=[ramp1_b, ramp1_a, ramp1_c],sig_base=[0.,0.,0.],dist='Unif'),
-            weight=1./sig_insar,scale=1.,base=[0., 0., 0.],sig_base=[0.01,0.01,0.01],dist='Unif'),
+    insarstack(
+        network='int_{}-{}.xylos'.format(dates[0],dates[1]),
+        reduction='Int.1',
+        wdir=maindir+'insar/',
+        proj=projm,
+        tmin= times[0],
+        tmax=times[1],
+        los=None,
+        # weight=1.,scale=1.,base=[ramp1_b, ramp1_a, ramp1_c],sig_base=[0.,0.,0.],dist='Unif'),
+        weight=1./sig_insar,
+        scale=1.,
+        base=[0., 0., 0.],
+        sig_base=[0.01,0.01,0.01],
+        dist='Unif'),
 
-    insarstack(network='int_{}-{}.xylos'.format(dates[2],dates[3]),
-            reduction='Int.2',wdir=maindir+'insar/',proj=projm,
-            tmin= times[2], tmax=times[3], los=None,
-            # weight=1.,scale=1.,base=[ramp2_b, ramp2_a, ramp2_c],sig_base=[0.,0.,0.],dist='Unif'),
-            weight=1./sig_insar,scale=1.,base=[0., 0., 0.],sig_base=[0.01,0.01,0.01],dist='Unif'),
+    insarstack(
+        network='int_{}-{}.xylos'.format(dates[2],dates[3]),
+        reduction='Int.2',
+        wdir=maindir+'insar/',
+        proj=projm,
+        tmin= times[2],
+        tmax=times[3],
+        los=None,
+        # weight=1.,scale=1.,base=[ramp2_b, ramp2_a, ramp2_c],sig_base=[0.,0.,0.],dist='Unif'),
+        weight=1./sig_insar,
+        scale=1.,base=[0., 0., 0.],
+        sig_base=[0.01,0.01,0.01],
+        dist='Unif'),
     ]
 
 seismo=[

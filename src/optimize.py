@@ -62,8 +62,7 @@ elif 2 == len(argv):
   fname = sys.argv[1]
   print
   print 'input file :', fname
-  sys.path.append(path.dirname(path.abspath(fname)))
-  exec ("from " + path.basename(fname)+ " import *")
+  execfile(path.abspath(fname))
 else:
   assert False, "too many arguments"
 
