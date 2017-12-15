@@ -525,6 +525,7 @@ class inversion:
             # print 
             # print self.m[self.Msurface:]
             if depth < 0.:
+               logger.warning('Non-negative depth was tested!')
                return 1e14
             
             start += seg.Mpatch
