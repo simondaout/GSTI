@@ -24,7 +24,7 @@ from pyrocko import trace, gf
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('GSTI.optimize')
 
-NPROCESSORS = 3
+NPROCESSORS = 4
 STATUS_IOUT = 250
 
 
@@ -34,9 +34,11 @@ class inversion:
         
         self.kernels=flatten(kernels)
         self.basis=flatten(basis)
+
         self.timeseries=timeseries
         self.stacks=stacks
         self.seismo=seismo
+
         self.profiles = profiles
         self.store_path=store_path
         self.store=store
@@ -310,61 +312,62 @@ class inversion:
 
         return self.minit
 
-    def process(self, source, targets):
-        source.lat = self.ref[1]
-        source.lon = self.ref[0]
-        return self.engine.process(source, targets, nprocs=NPROCESSORS)
+    def process(self, sources, targets):
+        for src in sources:
+            src.lat = self.ref[1]
+            src.lon = self.ref[0]
+        return self.engine.process(sources, targets, nprocs=NPROCESSORS)
 
-    def build_gm(self):
-        g = np.zeros((self.N))
-        start=0
+    # def build_gm(self):
+    #     g = np.zeros((self.N))
+    #     start=0
 
-        M = 0
-        for i in xrange(self.Nstacks):
-            manifold = self.stacks[i]
-            index = manifold.Mbase
+    #     M = 0
+    #     for i in xrange(self.Nstacks):
+    #         manifold = self.stacks[i]
+    #         index = manifold.Mbase
 
-            mp = as_strided(self.m[M:M+index])
-            mpp = as_strided(self.m[self.Msurface:])
-            m = np.concatenate([mp,mpp])
-            # print m
-            # print 
+    #         mp = as_strided(self.m[M:M+index])
+    #         mpp = as_strided(self.m[self.Msurface:])
+    #         m = np.concatenate([mp,mpp])
+    #         # print m
+    #         # print 
 
-            # print m
-            # sys.exit()
-            g[start:start+manifold.N]=manifold.g(self,m)
-            # print manifold.g(self,m)
-            # print
+    #         # print m
+    #         # sys.exit()
+    #         g[start:start+manifold.N]=manifold.g(self,m)
+    #         # print manifold.g(self,m)
+    #         # print
             
-            start+=manifold.N
-            M += index
+    #         start+=manifold.N
+    #         M += index
 
-        for i in xrange(self.Nts):
-            manifold = self.timeseries[i]
-            index = manifold.Mbase+self.Mbasis*manifold.Npoints*manifold.dim
+    #     for i in xrange(self.Nts):
+    #         manifold = self.timeseries[i]
+    #         index = manifold.Mbase+self.Mbasis*manifold.Npoints*manifold.dim
 
-            # print theta[:self.Msurface]
-            # sys.exit()
-            mp = as_strided(self.m[M:M+index])
-            mpp = as_strided(self.m[self.Msurface:])
+    #         # print theta[:self.Msurface]
+    #         # sys.exit()
+    #         mp = as_strided(self.m[M:M+index])
+    #         mpp = as_strided(self.m[self.Msurface:])
 
-            m = np.concatenate([mp,mpp])
-            # print m
-            # print 
+    #         m = np.concatenate([mp,mpp])
+    #         # print m
+    #         # print 
 
-            g[start:start+manifold.N]=manifold.g(self,m)
+    #         g[start:start+manifold.N]=manifold.g(self,m)
             
-            start+=manifold.N
-            M += index
+    #         start+=manifold.N
+    #         M += index
 
-        for i in xrange(self.Nwav):
+    #     for i in xrange(self.Nwav):
 
-            manifold = self.seismo[i]
-            m = as_strided(self.m[self.Msurface:])
-            g[start:start+manifold.N]=manifold.g(self,m)
-            start+=manifold.N
+    #         manifold = self.seismo[i]
+    #         m = as_strided(self.m[self.Msurface:])
+    #         g[start:start+manifold.N]=manifold.g(self,m)
+    #         start+=manifold.N
 
-        return g
+    #     return g
 
     # @theano.compile.ops.as_op(itypes=[t.lscalar],otypes=[t.dvector])
     def foward(self, theta):
@@ -444,22 +447,22 @@ class inversion:
         logger.debug('Calculating residual...')
         r=np.zeros((self.N))
 
+        sources = [seg.get_source() for seg in self.segments]
+        targets = flatten([man.get_targets() for man in self.manifolds])
+        response = self.process(sources, targets)
+
         start=0
         M=0
-        for i in xrange(self.Nstacks):
-            manifold = self.stacks[i]
-            index = manifold.Mbase
+        for stack in self.stacks:
+            index = stack.Mbase
 
             mp = as_strided(self.m[M:M+index])
-            # print mp
             mpp = as_strided(self.m[self.Msurface:])
             m = np.concatenate([mp,mpp])
-            # print 
-            # print m
 
-            r[start:start+manifold.N]=manifold.residual(self, m)
+            r[start:start+stack.N]=stack.residual(self, m, response)
             
-            start+=manifold.N
+            start+=stack.N
             M += index
 
         for i in xrange(self.Nts):
@@ -473,7 +476,7 @@ class inversion:
 
             m = np.concatenate([mp,mpp])
 
-            r[start:start+manifold.N]=manifold.residual(self,m)
+            r[start:start+manifold.N]=manifold.residual(self, m, response)
             
             start+=manifold.N
             M += index
@@ -484,7 +487,6 @@ class inversion:
             m = as_strided(self.m[self.Msurface:])
             r[start:start+manifold.N]=manifold.residual(self,m)
             start+=manifold.N
-
         return r
 
     def residualscalar(self, theta):
@@ -522,10 +524,11 @@ class inversion:
             width = as_strided(self.m[self.Msurface+6+self.Mpatch*iseg])
             # print 
             # print self.m[self.Msurface:]
-            if (depth < 0.) or (width >= 2*depth):
-               print depth,width 
-               return np.ones((self.N,))*1e14
-
+            if depth < 0.:
+               return 1e14
+            
+            start += seg.Mpatch
+        
         # norm L1
         res = np.nansum(np.abs(self.residual()))
         # norm L2

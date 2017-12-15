@@ -17,19 +17,19 @@ class patch:
         sig_ss,sig_ds,sig_east,sig_north,sig_down,sig_length,sig_width,sig_strike,sig_dip,
         dist='Unif',connectivity=False,conservation=False):
         
-        self.name=name
-        self.ss,self.sss=ss,sig_ss
-        self.ds,self.sds=ds,sig_ds  
-        self.x1,self.sx1=north,sig_north # north top-left corner
-        self.x2,self.sx2=east,sig_east # east top-left corner
-        self.x3,self.sx3=down,sig_down
-        self.l,self.sl=length,sig_length
-        self.w,self.sw=width,sig_width
-        self.strike,self.sstrike=strike,sig_strike
-        self.dip,self.sdip=dip,sig_dip
-        self.dist=dist
-        self.connectivity=connectivity
-        self.conservation=conservation
+        self.name = name
+        self.ss, self.sss = ss, sig_ss
+        self.ds, self.sds = ds, sig_ds  
+        self.x1, self.sx1 = north, sig_north # north top-left corner
+        self.x2, self.sx2 = east, sig_east # east top-left corner
+        self.x3, self.sx3 = down, sig_down
+        self.l, self.sl = length, sig_length
+        self.w, self.sw = width, sig_width
+        self.strike, self.sstrike = strike, sig_strike
+        self.dip, self.sdip = dip, sig_dip
+        self.dist = dist
+        self.connectivity = connectivity
+        self.conservation = conservation
         # initiate variable
         self.connectindex = 0
         # set uncertainties to 0 for connected patches
@@ -101,10 +101,10 @@ class patch:
         
     def info(self):
         print "name segment:", self.name
-        print "# ss     ds     x1(km)     x2(km)     x3(km)    length(km)     width(km)   strike   dip  "
-        print ' {:.2f}   {:.2f}   {:.1f}   {:.1f}   {:.2f}   {:.2f}   {:.2f}    {:d}     {:d}'.\
-        format(*(self.tolist()))
-        print "#sigma_ss   sigma_ds   sigma_x1  sigma_x2  sigma_x3  sigma_length  sigma_width   sigma_strike  sigma_dip  "
+        src = self.get_source()
+        src.regularize()
+        print src
+        print "#sigma_ss   sigma_ds   sigma_x1  sigma_x2  sigma_x3  sigma_length  sigma_width   sigma_strike  sigma_dip"
         print '  {:.2f}   {:.2f}   {:.1f}   {:.1f}   {:.2f}   {:.2f}   {:.2f}    {:d}     {:d}'.\
         format(*(self.sigtolist()))
         print
@@ -165,18 +165,21 @@ class patch:
     def get_source(self):
         return self.source
 
+    def get_response_result(self, response, target):
+        source = self.get_source()
+        for src, tar, res in response.iter_results(get='results'):
+            if tar is target and src is source:
+                return res
+        raise AttributeError('Could not find targets for %s' % manifold)
+
 class segment:
-    def __init__(self,name,ss,ds,east,north,down,length,width,strike,dip,
-        sig_ss,sig_ds,sig_east,sig_north,sig_down,sig_length,sig_width,sig_strike,sig_dip,
-        prior_dist,connectivity=False,conservation=False):
+    def __init__(self, *args, **kwargs):
         
         self.Mseg = 1
-        self.prior=prior_dist
+        self.prior=kwargs.pop('prior_dist', 'Unif')
         self.segments=[]
 
-        src = patch(name,ss,ds,east,north,down,length,width,strike,dip,
-                sig_ss,sig_ds,sig_east,sig_north,sig_down,sig_length,sig_width,sig_strike,sig_dip,
-                 prior_dist,connectivity,conservation)
+        src = patch(*args, **kwargs)
 
         self.segments.append(src)
         # print src.ss

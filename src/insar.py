@@ -150,8 +150,7 @@ class insarstack:
     # create orbital function
     def reference(self):
           func = self.base[0]*self.x + self.base[1]*self.y + self.base[2]
-          return  func
-
+          return func
 
     def info(self):
         print
@@ -171,7 +170,7 @@ class insarstack:
 
     def get_targets(self):
         if self._targets is None:
-            self._targets = [SatelliteTarget(
+            self._targets = SatelliteTarget(
                 # distance in meters
                 # These changes of units are shit !
                 lats=self.lats,
@@ -182,72 +181,32 @@ class insarstack:
                 # phi, theta in rad
                 phi=self.phi,
                 theta=self.theta,
-                store_id=self.store_id)]
+                store_id=self.store_id)
         return self._targets
         
-    def g(self,inv,m):
+    def g(self, inv, m, response):
         logger.debug('Calculating G Matrix...')
 
         m = np.asarray(m)
-        # print m
-        # m = m.astype(float)
-
         # forward vector
         self.gm=np.zeros((self.N))
 
-        # print self.x,self.y
-        satellite_targets = self.get_targets()
-
         # update reference brame
         self.base = m[:self.Mbase]
-        # print self.base
-        # print
         self.gm[1::2] += self.reference()  
-        # print self.gm      
 
-        # for k in xrange(inv.Mbasis):
-        #     # one m value for each basis and each point
-        #     # duplicate m for all times
-        #     mp = as_strided(m[self.Mbase+k*self.Npoints:self.Mbase+(k+1)*self.Npoints])
-        #     # print mp
-        #     mpp = np.repeat(mp,self.Nt)
-        #     # print mpp.dtype
-        #     # print inv.basis[k].g(self.t).dtype
-        #     # print
-
-        #     self.gm += mpp*inv.basis[k].g(self.t)
-
-        start = 0
         for kernel in inv.kernels:
             for seg in kernel.segments:
-                # call pyrocko engine and extract los component
-                resp = inv.process(seg.get_source(), satellite_targets)
-                disp = resp.results_list[0][0].result['displacement.los']
-                # print disp
+                result = seg.get_response_result(response, self.get_targets())
+                disp = result.result['displacement.los']
 
-                # gt = np.zeros((self.N))
-                gt = np.repeat(disp,2)
-                # print gt
-
+                gt = np.repeat(disp, 2)
                 self.gm += kernel.g(self.t)*gt
-                # print self.t
-                # print kernel.g(self.t)
-                # print self.gm
-                # print
-                start += seg.Mpatch 
-
-                # print self.t
-                # print kernel.g(self.t)
-        # sys.exit()
 
         return self.gm
 
-    def residual(self,inv,m):
-        g=np.asarray(self.g(inv, m))
-        # print
-        # print g
-        # print self.d
-        # # print self.d-g
+    def residual(self, inv, m, response):
+        g=np.asarray(self.g(inv, m, response))
         self.res = (self.d-g)
         # self.res = (self.d-g)/self.sigmad
         return self.res

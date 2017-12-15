@@ -179,7 +179,7 @@ class gpstimeseries:
                 store_id=self.store_id)
         return self._targets
 
-    def g(self, inv, m):
+    def g(self, inv, m, response):
         logger.debug('Calculating G Matrix...')
         m = np.asarray(m)
 
@@ -216,12 +216,10 @@ class gpstimeseries:
 
                 gt += mppp*(np.ones((self.dim,point.Nt))*inv.basis[k].g(point.t)).flatten()
 
-            start = 0
             for kernel in inv.kernels:
                 for seg in kernel.segments:
-                    # call pyrocko engine
-                    resp = inv.process(seg.get_source(), self.get_targets())
-                    disp = resp.results_list[0][0].result
+                    resp = seg.get_response_result(response, self.get_targets())
+                    disp = resp.result
                     # print disp
                     # extract desired components
                     
@@ -235,14 +233,14 @@ class gpstimeseries:
                         # print result
                         # print
 
-                    start += seg.Mpatch
+                    
             temp += self.dim*point.Nt
 
         # sys.exit()
         return self.gm
 
-    def residual(self,inv,m):
-        g=np.asarray(self.g(inv,m))
+    def residual(self, inv, m, response):
+        g=np.asarray(self.g(inv, m, response))
         self.res = (self.d-g)/self.sigmad
         return self.res
 

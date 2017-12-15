@@ -159,7 +159,7 @@ class waveforms:
         print 'Lenght data vector:', self.N
     
 
-    def g(self,inv,m):
+    def g(self, inv, m, response):
         logging.info('Generating G Matrix...')
         m = np.asarray(m)
         # forward vector
@@ -170,7 +170,6 @@ class waveforms:
         for tr in self.syn:
             tr.ydata.fill(0.)
 
-        start = 0
         # one seismic trace can be associated to several kernel (ie coseismic+posteseismic)
         for k in xrange(len(inv.kernels)):
             kernel = inv.kernels[k]
@@ -183,13 +182,14 @@ class waveforms:
 
                 synt_traces = inv.process(seg.get_source(), self.targets).pyrocko_traces()
                 # for syn,tr in zip(synt_traces,self.traces):
-                # print len(syn.ydata), len(tr.ydata)
+                logger.debug('Length trace %d' % (len(syn.ydata), len(tr.ydata)))
                 # sys.exit()
 
                 temp = 0
                 for i in xrange(self.Npoints):
-                    # print temp 
-                    syn = synt_traces[i]
+                    # print temp
+
+                    syn = seg.get_response_result(response, self.targets[i]).get_pyrocko_trace()
                     # print len(syn.ydata)
                     # chop synt trace
                     try: 
@@ -209,25 +209,23 @@ class waveforms:
                     
                     temp += len(syn.ydata)
 
-                start += seg.Mpatch
-
         return self.gm
 
-    def residual(self,inv,m):
+    def residual(self, inv, m, response):
 
         misfit_list = []  # init a list for a all the singular misfits
         norm_list = []  # init a list for a all the singular normalizations
+            
+        # print self.res
+
+        g=np.asarray(self.g(inv, m, response))
+        self.res = (self.d-g)/self.sigmad
+
         for tr, syn in zip(self.traces, self.syn):
 
             misfit, norm = tr.misfit(candidate=syn, setup=self.setup) 
             misfit_list.append(misfit), norm_list.append(norm)  # append the misfit into a list
-            
         # self.res = np.asarray(misfit_list)/(self.sigmad*np.asarray(norm_list))
-        # print self.res
-
-        g=np.asarray(self.g(inv,m))
-        self.res = (self.d-g)/self.sigmad
-        # print self.res
 
         return self.res
 

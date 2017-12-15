@@ -84,6 +84,13 @@ satellite_target = SatelliteTarget(
     phi=phi,
     theta=theta)
 
+gps_target = StaticTarget(
+    lats=np.full(Ngps, ref_lat),
+    lons=np.full(Ngps, ref_lon),
+    north_shifts=np.array(stations_north),
+    east_shifts=np.array(stations_east))
+
+
 # Define the [east, north, down] average projection vector
 projm=[num.cos(theta[0])*num.cos(phi[0]),
       num.cos(theta[0])*num.sin(phi[0]),
@@ -158,7 +165,7 @@ print co2008
 patches = [co2008];
 sources = CombiSource(subsources=patches)
 # The computation is performed by calling process on the engine
-result_2008 = engine.process(sources, [satellite_target])
+result_2008 = engine.process(sources, [satellite_target, gps_target])
 
 # 2009 event
 # GCMT: lon=95.76, lat=37.64, Depth:12km, strike=101, dip:60, rake:83, mw=6.3
@@ -210,7 +217,7 @@ print co2009
 patches = [co2009];
 sources = CombiSource(subsources=patches)
 # The computation is performed by calling process on the engine
-result_2009 = engine.process(sources, [satellite_target])
+result_2009 = engine.process(sources, [satellite_target, gps_target])
 
 ##############################################
 #       Create synthetic waveforms           #
@@ -267,7 +274,6 @@ result_2009 = engine.process(sources, [satellite_target])
 # convert some dates to decimal time
 # [Eq1, Eq2, Int1_date1, Int1_date2, Int2_date1, Int2_date2]
 dates = [20080827, 20081210 ,20090708, 20091021]
-# dates = [20090828, 20080110, 20100421]
 times = date2dec(dates)
 # print times
 # sys.exit()
@@ -291,8 +297,6 @@ disp = np.zeros((2*Ninsar+len(t)*Ngps,4))
 # extract pyrocko results 
 N = result_2009.request.targets[0].coords5[:, 2]/1000
 E = result_2009.request.targets[0].coords5[:, 3]/1000
-# print N[:10]
-# print E[:10]
 # sys.exit()
 
 result_2009 = result_2009.results_list[0][0].result
@@ -302,9 +306,11 @@ components = result_2009.keys()
 result_2008 = result_2008.results_list[0][0].result
 
 # create fake interseismic surface displacements 
-# vint = -0.004
+vint = -0.004
+
 # ie.e TS clean form interseismic trend
-vint = 0.0
+# vint = 0.0
+
 disp[:Ninsar,0] = vint*tint1
 disp[Ninsar:2*Ninsar,0] = vint*tint2 
 
@@ -522,8 +528,7 @@ if savedata==True:
         d = as_strided(disp[2*Ninsar+i*len(t):2*Ninsar+(i+1)*len(t),:])
         sigma = num.full_like(t, 0.001)
         sigma_vertical = num.full_like(t, 0.005)
-        gps_data = np.vstack([t, d[:, 1], d[:, 2], d[:, 3], sigma, sigma, sigma_vertical]).T
-        print(gps_data.shape)
+        gps_data = np.vstack([t, d[:, 1], d[:, 3], d[:, 2], sigma, sigma, sigma_vertical]).T
         np.savetxt(fn_gps, gps_data)
 
 #####################################################
@@ -560,20 +565,20 @@ kernels=[
                 east=east08,
                 north=north08,
                 down=d08,
-                length=l08+8,
+                length=l08,
                 width=W08,
-                strike=strike08+10,
-                dip=dip08+5,
+                strike=strike08,
+                dip=dip08,
 
                 sig_ss=0.,
                 sig_ds=1,
                 sig_east=0,
                 sig_north=0,
                 sig_down=0,
-                sig_length=10.,
+                sig_length=0.,
                 sig_width=0.,
-                sig_strike=10,
-                sig_dip=10.,
+                sig_strike=0,
+                sig_dip=0.,
 
                 prior_dist='Unif',
                 connectivity=False,
@@ -599,20 +604,20 @@ kernels=[
                 length=l09,
                 width=W09,
                 strike=strike09,
-                dip=dip09+10,
+                dip=dip09,
 
-                sig_ss=0.,
+                sig_ss=5.,
                 sig_ds=1.,
-                sig_east=0.,
+                sig_east=1.,
                 sig_north=0.,
-                sig_down=0.,
-                sig_length=0.,
+                sig_down=1.,
+                sig_length=4.,
                 sig_width=0.,
-                sig_strike=0.,
-                sig_dip=10.,
+                sig_strike=5.,
+                sig_dip=1.,
 
                 prior_dist='Unif',
-                connectivity='xitieshan',
+                connectivity=False,
                 conservation=False)
                 ],
     date=time09, # put here the GCMT time 
@@ -625,7 +630,7 @@ time0 = '2005-01-01 00:00:0.0'
 basis=[
 # coseismic(name='coseismic', date=t08, m=0., sigmam=0.1),
 # sinterseismic(name='interseismic', date=time0, m=0, sigmam=0.1),
-# interseismic(name='interseismic', date=time0, m=vint+0.002, sigmam=0.004, prior_dist='Unif'),
+interseismic(name='interseismic', date=time0, m=vint+0.002, sigmam=0.004, prior_dist='Unif'),
 # postseismic(tini = t09, tend= t09+1., Mfunc=1, m=vpost, sigmam=0)
 ]  
 

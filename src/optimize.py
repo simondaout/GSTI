@@ -103,11 +103,9 @@ for i in xrange(inv.Mker):
 
 # build prior model
 m_init = inv.build_prior()
-
-### TESTING ###
-inv.build_gm()
 inv.residual()
 
+### TESTING ###
 # # plots
 # nfigure=0
 # inv.plot_stations(nfigure)
@@ -135,8 +133,9 @@ print
 print 'Optmized parameters:'
 bnd=column_stack((inv.mmin,inv.mmax))
 for i in xrange(len(bnd)): 
-  print 'bounds for parameter {}: {}'.format(inv.sampled[i],bnd[i])
+  print 'bounds for parameter {}: {}'.format(inv.sampled[i], bnd[i])
 
+bounds = tuple(tuple(b) for b in bnd)
 if short_optim:
 
   t = time.time() 
@@ -145,7 +144,7 @@ if short_optim:
   # res = opt.fmin_slsqp(inv.residualscalar,inv.priors,bounds=bnd)
   res = opt.differential_evolution(
     inv.residualscalar,
-    bounds=bnd,
+    bounds=bounds,
     maxiter=niter,
     polish=False,
     disp=True)
