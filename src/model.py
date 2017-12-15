@@ -1,3 +1,5 @@
+import logging
+import time
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
 import math
@@ -6,6 +8,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import matplotlib.cm as cm
 import copy
+import os.path as op
 
 import pymc 
 # import theano
@@ -16,11 +19,18 @@ from GSTI.model import *
 from GSTI.flatten import *
 from GSTI.readgmt import *
 
-from pyrocko import trace
+from pyrocko import trace, gf
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger('GSTI.optimize')
+
+NPROCESSORS = 3
+STATUS_IOUT = 250
+
 
 class inversion:
     def __init__(self,kernels,basis,timeseries,stacks,seismo,profiles,gmtfiles,outdir,
-        store_path='./',store=None,bounds=None,ref=[0,0]):
+        store_path='./', store=None, bounds=None, ref=[0,0]):
         
         self.kernels=flatten(kernels)
         self.basis=flatten(basis)
@@ -44,6 +54,11 @@ class inversion:
 
         self.manifolds=flatten([stacks,timeseries,seismo])
         self.Nmanif = len(self.manifolds)
+
+        self.iiter = 0
+        self.looptime = time.time()
+
+        self.engine = gf.LocalEngine(store_superdirs=store_path, use_config=True)
 
         # load data and build model vector for each manifolds
         for i in xrange(self.Nmanif):
@@ -71,7 +86,6 @@ class inversion:
                     self.segments[k].connect(self.segments[kk])
                     # sys.exit()
                 # load local engine
-                self.segments[k].loadEngine(self.store, self.store_path)
 
         # print self.segments[1].connectivity
         # print self.segments[0].name
@@ -296,6 +310,10 @@ class inversion:
 
         return self.minit
 
+    def process(self, source, targets):
+        source.lat = self.ref[1]
+        source.lon = self.ref[0]
+        return self.engine.process(source, targets, nprocs=NPROCESSORS)
 
     def build_gm(self):
         g = np.zeros((self.N))
@@ -348,52 +366,6 @@ class inversion:
 
         return g
 
-    def residual(self):
-        r=np.zeros((self.N))
-
-        start=0
-        M=0
-        for i in xrange(self.Nstacks):
-            manifold = self.stacks[i]
-            index = manifold.Mbase
-
-            mp = as_strided(self.m[M:M+index])
-            # print mp
-            mpp = as_strided(self.m[self.Msurface:])
-            m = np.concatenate([mp,mpp])
-            # print 
-            # print m
-
-            r[start:start+manifold.N]=manifold.residual(self,m)
-            
-            start+=manifold.N
-            M += index
-
-        for i in xrange(self.Nts):
-            manifold = self.timeseries[i]
-            index = manifold.Mbase+self.Mbasis*manifold.Npoints*manifold.dim
-
-            # print theta[:self.Msurface]
-            # sys.exit()
-            mp = as_strided(self.m[M:M+index])
-            mpp = as_strided(self.m[self.Msurface:])
-
-            m = np.concatenate([mp,mpp])
-
-            r[start:start+manifold.N]=manifold.residual(self,m)
-            
-            start+=manifold.N
-            M += index
-
-        for i in xrange(self.Nwav):
-
-            manifold = self.seismo[i]
-            m = as_strided(self.m[self.Msurface:])
-            r[start:start+manifold.N]=manifold.residual(self,m)
-            start+=manifold.N
-
-        return r
-
     # @theano.compile.ops.as_op(itypes=[t.lscalar],otypes=[t.dvector])
     def foward(self, theta):
         g = np.zeros((self.N))
@@ -410,6 +382,13 @@ class inversion:
 
         # check that dislocations are bellow the surface
         for j in xrange(self.Mseg):
+            # update parameters and connectivity
+            seg.update_parameters(mpp)
+            # construct connecivities
+            if seg.connectivity is not False:
+                seg.connect(inv.segments[seg.connectindex])
+            # print seg.info()
+
             depth = as_strided(self.m[self.Msurface+4+self.Mpatch*j])
             width = as_strided(self.m[self.Msurface+6+self.Mpatch*j])
             # print 
@@ -461,9 +440,61 @@ class inversion:
 
         return g
 
-    def residualscalar(self,theta):
+    def residual(self):
+        logger.debug('Calculating residual...')
+        r=np.zeros((self.N))
 
+        start=0
+        M=0
+        for i in xrange(self.Nstacks):
+            manifold = self.stacks[i]
+            index = manifold.Mbase
+
+            mp = as_strided(self.m[M:M+index])
+            # print mp
+            mpp = as_strided(self.m[self.Msurface:])
+            m = np.concatenate([mp,mpp])
+            # print 
+            # print m
+
+            r[start:start+manifold.N]=manifold.residual(self, m)
+            
+            start+=manifold.N
+            M += index
+
+        for i in xrange(self.Nts):
+            manifold = self.timeseries[i]
+            index = manifold.Mbase+self.Mbasis*manifold.Npoints*manifold.dim
+
+            # print theta[:self.Msurface]
+            # sys.exit()
+            mp = as_strided(self.m[M:M+index])
+            mpp = as_strided(self.m[self.Msurface:])
+
+            m = np.concatenate([mp,mpp])
+
+            r[start:start+manifold.N]=manifold.residual(self,m)
+            
+            start+=manifold.N
+            M += index
+
+        for i in xrange(self.Nwav):
+
+            manifold = self.seismo[i]
+            m = as_strided(self.m[self.Msurface:])
+            r[start:start+manifold.N]=manifold.residual(self,m)
+            start+=manifold.N
+
+        return r
+
+    def residualscalar(self, theta):
         # Rebuild the full m vector: theta lenghts depends of the give bounds
+        self.iiter += 1
+        if self.iiter % STATUS_IOUT == 0:
+            iter_sec = float(STATUS_IOUT) / (time.time() - self.looptime)
+            print 'Iteration %d (@ %.1f iter/sec)' % (self.iiter, iter_sec)
+            self.looptime = time.time()
+
         self.m = []
         uu = 0
         for name, initial in zip(self.name, self.minit):
@@ -473,10 +504,22 @@ class inversion:
             elif name in self.fixed:
                 self.m.append(initial)
 
+        start = 0
         # check that dislocations are bellow the surface
-        for j in xrange(self.Mseg):
-            depth = as_strided(self.m[self.Msurface+4+self.Mpatch*j])
-            width = as_strided(self.m[self.Msurface+6+self.Mpatch*j])
+        for iseg, seg in enumerate(self.segments):
+            # update parameters and connectivity
+            mp = as_strided(self.m[self.Msurface:])
+            mpp = as_strided(mp[start:start+seg.Mpatch])
+            seg.update_parameters(mpp)
+
+            # construct connecivities
+            if seg.connectivity is not False:
+                seg.connect(self.segments[seg.connectindex])
+                # sys.exit()
+            # print seg.info()
+
+            depth = as_strided(self.m[self.Msurface+4+self.Mpatch*iseg])
+            width = as_strided(self.m[self.Msurface+6+self.Mpatch*iseg])
             # print 
             # print self.m[self.Msurface:]
             if (depth < 0.) or (width >= 2*depth):
@@ -487,7 +530,9 @@ class inversion:
         res = np.nansum(np.abs(self.residual()))
         # norm L2
         # res = np.sqrt(np.nansum(self.residual()**2))
-        # print res
+        # print 'Residual %f' % res
+        with open(op.join(self.outdir, 'stat', 'misfit.dat'), 'wab') as f:
+            f.write(res)
         return res
 
 

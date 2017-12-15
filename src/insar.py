@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
 import pymc
@@ -6,6 +7,9 @@ from os import path
 import math, sys
 
 from pyrocko.gf import SatelliteTarget
+
+logger = logging.getLogger('GSTI.insar')
+
 
 class point:
     def __init__(self,x,y):
@@ -29,7 +33,7 @@ class insarpoint(point):
 
 class insarstack:
     def __init__(self,network,reduction,wdir,proj=None,los=None,
-        tmin=0.,tmax=1.,weight=1.,scale=1.,base=[0,0,0],sig_base=[0,0,0],dist='Unif'):
+        tmin=0.,tmax=1.,weight=1.,scale=1.,base=[0,0,0],sig_base=[0,0,0],dist='Unif', store_id=None):
 
         self.network=network
         self.reduction=reduction
@@ -43,6 +47,7 @@ class insarstack:
         self.base=base
         self.sig_base=sig_base
         self.dist=dist
+        self.store_id=store_id
 
         self.points=[]
         self.plot='LOS'
@@ -52,7 +57,9 @@ class insarstack:
         self.dim=1
         self.Mbase = len(self.base)
 
-    def load(self,inv):
+        self._targets = None
+
+    def load(self, inv):
         fname=self.wdir + self.network
         if not path.isfile(fname):
             raise ValueError("invalid file name: " + fname)
@@ -133,7 +140,8 @@ class insarstack:
         self.t = np.tile([self.tmin, self.tmax],self.Npoints)
         self.Nt = 2
         # define reference points
-        self.lats,self.lons=np.ones(self.Npoints)*inv.ref[1],np.ones(self.Npoints)*inv.ref[0],
+        self.lats=np.ones(self.Npoints)*inv.ref[1]
+        self.lons=np.ones(self.Npoints)*inv.ref[0]
 
         for i in xrange(self.Npoints):
             self.points.append(insarpoint(self.x[i],self.y[i],self.reduction,self.scale*self.ulos[i]*(self.tmax-self.tmin),\
@@ -160,8 +168,25 @@ class insarstack:
         print 'Orbital ramp: {}*x + {}*y + {})'.format(self.base[0],self.base[1],self.base[2])
         # print self.d[:20]
         # sys.exit()
+
+    def get_targets(self):
+        if self._targets is None:
+            self._targets = [SatelliteTarget(
+                # distance in meters
+                # These changes of units are shit !
+                lats=self.lats,
+                lons=self.lons,
+                north_shifts=self.y*1000.,
+                east_shifts=self.x*1000.,
+                interpolation='nearest_neighbor',
+                # phi, theta in rad
+                phi=self.phi,
+                theta=self.theta,
+                store_id=self.store_id)]
+        return self._targets
         
     def g(self,inv,m):
+        logger.debug('Calculating G Matrix...')
 
         m = np.asarray(m)
         # print m
@@ -171,17 +196,7 @@ class insarstack:
         self.gm=np.zeros((self.N))
 
         # print self.x,self.y
-
-        satellite_targets = SatelliteTarget(
-            # distance in meters
-            # These changes of units are shit !
-            lats=self.lats,lons=self.lons,
-            north_shifts = self.y*1000.,
-            east_shifts =  self.x*1000.,
-            interpolation='nearest_neighbor',
-            # phi, theta in rad
-            phi=self.phi,
-            theta=self.theta)
+        satellite_targets = self.get_targets()
 
         # update reference brame
         self.base = m[:self.Mbase]
@@ -203,47 +218,32 @@ class insarstack:
         #     self.gm += mpp*inv.basis[k].g(self.t)
 
         start = 0
-        for k in xrange(len(inv.kernels)):
-            kernel = inv.kernels[k]
-            # print kernel.name
-            # mp = as_strided(m[self.Mbase+inv.Mbasis*self.Npoints:])
-            mp = as_strided(m[self.Mbase:])
-            for j in xrange(kernel.Mseg):
-                seg =  kernel.segments[j]
-                mpp = as_strided(mp[start:start+seg.Mpatch])
-
-                # update patch parameter
-                seg.ss,seg.ds,seg.x1,seg.x2,seg.x3,seg.l,seg.w,seg.strike,seg.dip = mpp
-                # construct connecivities
-                if seg.connectivity is not False:
-                    seg.connect(inv.segments[seg.connectindex])
-                seg.m = seg.tolist()
-                # print seg.info()
-
+        for kernel in inv.kernels:
+            for seg in kernel.segments:
                 # call pyrocko engine and extract los component
-                disp = seg.engine(satellite_targets, inv.ref).\
-                results_list[0][0].result['displacement.los']
+                resp = inv.process(seg.get_source(), satellite_targets)
+                disp = resp.results_list[0][0].result['displacement.los']
                 # print disp
 
                 # gt = np.zeros((self.N))
                 gt = np.repeat(disp,2)
                 # print gt
 
-                self.gm += inv.kernels[k].g(self.t)*gt
+                self.gm += kernel.g(self.t)*gt
                 # print self.t
-                # print inv.kernels[k].g(self.t)
+                # print kernel.g(self.t)
                 # print self.gm
                 # print
                 start += seg.Mpatch 
 
                 # print self.t
-                # print inv.kernels[k].g(self.t)
+                # print kernel.g(self.t)
         # sys.exit()
 
         return self.gm
 
     def residual(self,inv,m):
-        g=np.asarray(self.g(inv,m))
+        g=np.asarray(self.g(inv, m))
         # print
         # print g
         # print self.d

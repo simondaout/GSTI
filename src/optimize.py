@@ -15,6 +15,7 @@ import math
 
 from os import path, environ
 from sys import argv, exit, stdin, stdout
+from pyrocko import gf, util
 
 import getopt
 import time
@@ -68,42 +69,26 @@ else:
 
 # Create directories for output files
 inv.outdir = outdir
-if not os.path.exists(inv.outdir):
-        os.makedirs(inv.outdir)
-outgps = inv.outdir+'gps/'
-if not os.path.exists(outgps):
-        os.makedirs(outgps)
-outinsar = inv.outdir+'insar/'
-if not os.path.exists(outinsar):
-        os.makedirs(outinsar)
-outmap = inv.outdir+'map/'
-if not os.path.exists(outmap):
-        os.makedirs(outmap)
-outpro = inv.outdir+'profiles/'
-if not os.path.exists(outpro):
-        os.makedirs(outpro)
-outstat = inv.outdir+'stat/'
-if not os.path.exists(outstat):
-        os.makedirs(outstat)
-outwave = inv.outdir+'wave/'
-if not os.path.exists(outwave):
-        os.makedirs(outwave)
+util.ensuredir(inv.outdir)
+paths = ['gps', 'insar', 'map', 'profiles', 'stat', 'wave']
 
+for p in paths:
+  util.ensuredir(p)
 
 inv = inversion(
-kernels=kernels,
-basis=basis,
-timeseries=timeseries,
-stacks=stacks,
-seismo=seismo,
-profiles=profiles,
-store_path=store_path,
-store=store,
-gmtfiles=gmtfiles,
-outdir=outdir,
-bounds=bounds,
-ref=reference,
-  )
+    kernels=kernels,
+    basis=basis,
+    timeseries=timeseries,
+    stacks=stacks,
+    seismo=seismo,
+    profiles=profiles,
+    store_path=store_path,
+    store=store,
+    gmtfiles=gmtfiles,
+    outdir=outdir,
+    bounds=bounds,
+    ref=reference,
+)
 
 # build data matrix
 inv.d = inv.build_data()
@@ -151,7 +136,6 @@ print 'Optmized parameters:'
 bnd=column_stack((inv.mmin,inv.mmax))
 for i in xrange(len(bnd)): 
   print 'bounds for parameter {}: {}'.format(inv.sampled[i],bnd[i])
-print
 
 if short_optim:
 
@@ -159,7 +143,12 @@ if short_optim:
   # res = opt.minimize(inv.residualscalar,inv.priors,method='SLSQP',bounds=bnd)
   # res = opt.minimize(inv.residualscalar,inv.priors,method='L-BFGS-B',bounds=bnd)
   # res = opt.fmin_slsqp(inv.residualscalar,inv.priors,bounds=bnd)
-  res = opt.differential_evolution(inv.residualscalar, bounds=bnd,maxiter=niter,polish=False,disp=True)
+  res = opt.differential_evolution(
+    inv.residualscalar,
+    bounds=bnd,
+    maxiter=niter,
+    polish=False,
+    disp=True)
   
   elapsed = time.time() - t
   print

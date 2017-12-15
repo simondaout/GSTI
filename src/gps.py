@@ -1,12 +1,18 @@
+import logging
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
 
 from os import path
 import sys
 
-from pyrocko.gf import SatelliteTarget
+from pyrocko.gf import StaticTarget
 
 import pymc
+
+km = 1000.
+
+logger = logging.getLogger('GSTI.gps')
+
 
 class point:
     def __init__(self,x,y):
@@ -30,7 +36,7 @@ class gpspoint(point):
 
 class gpstimeseries:
     def __init__(self,network,reduction,dim,wdir,scale=1.,weight=1.,proj=[1.,1.,1.],
-        extension='.dat',base=[0,0,0],sig_base=[0,0,0],dist='Unif'):
+        extension='.dat',base=[0,0,0],sig_base=[0,0,0],dist='Unif',store_id=None):
 
         self.network=network
         self.reduction=reduction
@@ -43,6 +49,7 @@ class gpstimeseries:
         self.base=base
         self.sig_base=sig_base
         self.dist=dist
+        self.store_id=store_id
     
         # inititialisation
         self.points=[]
@@ -51,6 +58,8 @@ class gpstimeseries:
         self.x,self.y=[],[]
         self.type = 'GPS' 
         self.Mbase = len(self.base)
+
+        self._targets = None
 
     def load(self,inv):
 
@@ -68,7 +77,7 @@ class gpstimeseries:
             print 'Load GPS time series: ', fname
             print 
         
-        f=file(fname,'r')
+        f = file(fname, 'r')
         # name, east(km), north(km)
         name,x,y=np.loadtxt(f,comments='#',unpack=True,dtype='S4,f,f')
 
@@ -89,19 +98,20 @@ class gpstimeseries:
         
         print 'Load time series... '
         for i in xrange(self.Npoints):
-            station=self.wdir+self.reduction+'/'+self.name[i]+self.extension 
-            print station
-            if not path.isfile(station):
-                raise ValueError("invalid file name: " + station)
-                pass
+            fn_station = path.join(self.wdir, self.reduction, self.name[i] + self.extension)
+            fn_station = path.abspath(fn_station)
+            if not path.isfile(fn_station):
+                raise ValueError("invalid file name: " + fn_station)
             else:
                 # print self.x[i],self.y[i],self.name[i],self.proj 
                 self.points.append(gpspoint(self.x[i],self.y[i],self.name[i],self.proj))
-
+                print self.x[i],self.y[i],self.name[i],self.proj
             if 3==self.dim:
-                #dated,east,north,down,esigma,nsigma,dsigma=np.loadtxt(station,comments='#',usecols=(1,2,3,4,5,6,7), unpack=True,dtype='f,f,f,f,f,f,f')
-                dated,east,north,down,esigma,nsigma,dsigma=np.loadtxt(station,comments='#',usecols=(0,1,2,3,4,5,6), unpack=True,dtype='f,f,f,f,f,f,f')
-                dated,east,north,down,esigma,nsigma,dsigma=np.atleast_1d(dated,east,north,down,esigma,nsigma,dsigma)
+                print(fn_station)
+                #dated,east,north,down,esigma,nsigma,dsigma=np.loadtxt(fn_station,comments='#',usecols=(1,2,3,4,5,6,7), unpack=True,dtype='f,f,f,f,f,f,f')
+                data = np.loadtxt(fn_station, unpack=True)
+                dated,east,north,down,esigma,nsigma,dsigma = np.atleast_1d(data)
+
                 # print  dated,east,north,down,esigma,nsigma,dsigma
 
                 self.points[i].d=[east*self.scale,north*self.scale,down*self.scale]
@@ -116,14 +126,14 @@ class gpstimeseries:
                 # print self.points[i].vnorth, self.points[i].veast
 
                 # reference frame
-                self.ref = [0,0,0]
+                self.ref = [0, 0, 0]
             
             if 2==self.dim:
-                #date,dated,north,east,nsigma,esigma=np.loadtxt(station,comments='#',usecols=(0,1,2,3,4,5), unpack=True,dtype='f,f,f,f,f,f')
-                dated,east,north,esigma,nsigma=np.loadtxt(station,comments='#',usecols=(0,1,2,3,4), unpack=True,dtype='f,f,f,f,f')
+                #date,dated,north,east,nsigma,esigma=np.loadtxt(fn_station,comments='#',usecols=(0,1,2,3,4,5), unpack=True,dtype='f,f,f,f,f,f')
+                dated,east,north,esigma,nsigma=np.loadtxt(fn_station,comments='#',usecols=(0,1,2,3,4), unpack=True,dtype='f,f,f,f,f')
                 dated,east,north,esigma,nsigma=np.atleast_1d(dated,east,north,esigma,nsigma)
                 #self.points[i].d=[east,north]
-                self.points[i].d=[east*self.scale,north*self.scale]
+                self.points[i].d=[east*self.scale, north*self.scale]
                 self.points[i].sigmad=[esigma*self.sigmad*self.scale,nsigma*self.sigmad*self.scale]
                 #self.points[i].sigmad=[self.sigmad*self.scale,self.sigmad*self.scale]
                 self.plot=['east','north']
@@ -158,8 +168,19 @@ class gpstimeseries:
         print 'Reference frame:', self.base
         print 
 
-    def g(self,inv,m):
+    def get_targets(self):
+        if self._targets is None:
+            self._targets = StaticTarget(
+                lats=np.array([p.lat for p in self.points]),
+                lons=np.array([p.lon for p in self.points]),
+                north_shifts=np.array([p.y for p in self.points]),
+                east_shifts=np.array([p.x for p in self.points]),
+                interpolation='nearest_neighbor',
+                store_id=self.store_id)
+        return self._targets
 
+    def g(self, inv, m):
+        logger.debug('Calculating G Matrix...')
         m = np.asarray(m)
 
         # forward vector
@@ -167,21 +188,14 @@ class gpstimeseries:
 
         # have to do point by point because temporal sampling might  
         # be different for each stations
+
         temp = 0
         for i in xrange(self.Npoints): 
             point = self.points[i]
-            #print point.info()
+            # print point.info()
             gt = as_strided(self.gm[temp:temp+self.dim*point.Nt])
-            # print 'north, east', np.ones(1)*point.y*1000., np.ones(1)*point.x*1000.
+            # print 'north, east', np.ones(1)*point.y*km, np.ones(1)*point.x*km
 
-            satellite_targets = SatelliteTarget(
-                lats = np.ones(1)*point.lat,
-                lons = np.ones(1)*point.lon,
-                north_shifts = np.ones(1)*point.y*1000.,
-                east_shifts =  np.ones(1)*point.x*1000.,
-                interpolation = 'nearest_neighbor',
-                phi=np.ones(1),
-                theta=np.ones(1))
 
             # update reference frame
             self.base = m[:self.Mbase]
@@ -198,38 +212,16 @@ class gpstimeseries:
             for k in xrange(len(inv.basis)): 
                 mp = as_strided(m[self.Mbase+k*self.Npoints*self.dim:self.Mbase+(k+1)*self.Npoints*self.dim])
                 mpp = as_strided(mp[i*self.dim:(i+1)*self.dim])
-                # print mpp
-                # print
                 mppp = np.repeat(mpp,point.Nt) 
-                # print mppp
-                # print np.shape(mppp), np.shape((np.ones((self.dim,point.Nt))*inv.basis[k].g(point.t)).flatten())
-                
+
                 gt += mppp*(np.ones((self.dim,point.Nt))*inv.basis[k].g(point.t)).flatten()
-                # print gt
-                # sys.exit()
 
             start = 0
-            for k in xrange(len(inv.kernels)):
-                kernel = inv.kernels[k]
-                mp = as_strided(m[self.Mbase+inv.Mbasis*self.Npoints*self.dim:])
-                # print mp
-
-                for j in xrange(kernel.Mseg):
-                    seg =  kernel.segments[j]
-                    mpp = as_strided(mp[start:start+seg.Mpatch])
-                    # print mpp
-
-                    # update patch parameter
-                    seg.ss,seg.ds,seg.x1,seg.x2,seg.x3,seg.l,seg.w,seg.strike,seg.dip = mpp
-                    # construct connecivities
-                    if seg.connectivity is not False:
-                        seg.connect(inv.segments[seg.connectindex])
-                    seg.m = seg.tolist()
-                    # print seg.info()
-
+            for kernel in inv.kernels:
+                for seg in kernel.segments:
                     # call pyrocko engine
-                    disp = seg.engine(satellite_targets, inv.ref).\
-                    results_list[0][0].result
+                    resp = inv.process(seg.get_source(), self.get_targets())
+                    disp = resp.results_list[0][0].result
                     # print disp
                     # extract desired components
                     
@@ -237,8 +229,8 @@ class gpstimeseries:
 
                     for ii in xrange(len(components)):
                         # print components[ii]
-                        result = disp[components[ii]]
-                        gt[point.Nt*ii:point.Nt*(ii+1)] += inv.kernels[k].g(point.t)*result
+                        result = disp[components[ii]][i]
+                        gt[point.Nt*ii:point.Nt*(ii+1)] += kernel.g(point.t)*result
                         # print inv.kernels[k].g(point.t)
                         # print result
                         # print
@@ -262,12 +254,4 @@ class gpstimeseries:
           mp[j] += epsi 
           jac[:,j]=(self.g(inv,mp)-self.g(inv,m))/epsi
         return jac
-
-
-
-
-
-
-
-
 

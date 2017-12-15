@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
 
@@ -11,11 +12,20 @@ from pyrocko.gf import SatelliteTarget,Target,LocalEngine
 from pyrocko import gf, moment_tensor as mtm, trace
 from pyrocko import util, pile, model, config, trace, io, pile
 
+logger = logging.getLogger('GSTI.waveforms')
+
 
 class waveforms:
-    def __init__(self,network,reduction,wdir,event,weight=1.,phase='P',component='Z',
-        filter_corner=0.055,filter_order=4,filter_type='low',misfit_norm=2,taper_fade=2.0,
-        base=0,sig_base=0,extension='',dist='Unif'):
+    def __init__(self, network, reduction, wdir, event,
+                 weight=1., phase='P', component='Z',
+                 filter_corner=0.055, filter_order=4, filter_type='low',
+                 taper_fade=2.0, misfit_norm=2,
+                 base=0,
+                 sig_base=0,
+                 extension='',
+                 dist='Unif',
+ 
+                 store_id=None):
         
         self.network=network
         self.reduction=reduction
@@ -36,6 +46,7 @@ class waveforms:
 
         self.extension=extension
         self.dist=dist
+        self.store_id=store_id
 
         self.taper = trace.CosFader(xfade=self.taper_fade)  # Cosine taper with fade in and out of 2s.
         self.bw_filter = trace.ButterworthResponse(corner=self.filter_corner,  # in Hz
@@ -62,8 +73,31 @@ class waveforms:
         # sys.exit()
         self.type = 'Waveform'
 
+        self._targets = None
+
+    def get_targets(self):
+        if self._targets is None:
+            self._targets = []
+            for station,tr in zip(stations_list, self.traces):  # iterate over all stations
+                # print station.lat, station.lon
+                target = Target(
+                    lat = np.float(station.lat),  # station lat.
+                    lon = np.float(station.lon),   # station lon.
+                    store_id = self.store_id,   # The gf-store to be used for this target,
+                    # we can also employ different gf-stores for different targets.
+                    interpolation = 'multilinear',   # interp. method between gf cells
+                    quantity = 'displacement',   # wanted retrieved quantity
+                    codes = station.nsl() + ('BH'+self.component,))  # Station and network code
+
+                # Next we extract the expected arrival time for this station from the the store,
+                # so we can use this later to define a cut-out window for the optimization:
+                self._targets.append(target)
+                self.names.append(station.nsl()[1])
+        return self._targets
+
     def load(self,inv):
         # load the data as a pyrocko pile and reform them into an array of traces
+        logger.info('Loading waveform data...')
         data = pile.make_pile([self.wdir+self.reduction])
         self.traces = data.all()
 
@@ -74,28 +108,13 @@ class waveforms:
         for s in stations_list:
             s.set_channels_by_name(*self.component.split())
 
-        self.targets = []
         self.tmin, self.tmax = [], []
         self.arrivals = []
         self.names = []
 
-        for station,tr in zip(stations_list,self.traces):  # iterate over all stations
-            # print station.lat, station.lon
-            target = Target(
-            lat = np.float(station.lat),  # station lat.
-            lon = np.float(station.lon),   # station lon.
-            store_id = inv.store,   # The gf-store to be used for this target,
-            # we can also employ different gf-stores for different targets.
-            interpolation = 'multilinear',   # interp. method between gf cells
-            quantity = 'displacement',   # wanted retrieved quantity
-            codes = station.nsl() + ('BH'+self.component,))  # Station and network code
-
-            # Next we extract the expected arrival time for this station from the the store,
-            # so we can use this later to define a cut-out window for the optimization:
-            self.targets.append(target)
-            self.names.append(station.nsl()[1])
-
         # print len(self.traces), len(self.targets)
+
+        self.targets = self.get_targets()
 
         for station,tr,target in zip(stations_list,self.traces,self.targets):
             
@@ -141,6 +160,7 @@ class waveforms:
     
 
     def g(self,inv,m):
+        logging.info('Generating G Matrix...')
         m = np.asarray(m)
         # forward vector
         self.gm=np.zeros((self.N))
@@ -157,24 +177,11 @@ class waveforms:
             # not sure: slow slips cannot produce seismic waves? so not necessary too loop over it
             # if kernel.seismo is True:
             # one seimic trace can be the result of slip of several patches
-            for j in xrange(kernel.Mseg):
-                seg =  kernel.segments[j]
-                mp = as_strided(m[start:start+seg.Mpatch])
-                
-                # update patch parameter
-                seg.ss,seg.ds,seg.x1,seg.x2,seg.x3,seg.l,seg.w,seg.strike,seg.dip = mp
-                # construct connecivities
-                if seg.connectivity is not False:
-                    seg.connect(inv.segments[seg.connectindex])
-
-
-                seg.m = seg.tolist()
-
+            for seg in kernel.segments:
                 # update time event
                 seg.time += self.base
 
-                synt_traces = seg.engine(self.targets, inv.ref).\
-                pyrocko_traces() 
+                synt_traces = inv.process(seg.get_source(), self.targets).pyrocko_traces()
                 # for syn,tr in zip(synt_traces,self.traces):
                 # print len(syn.ydata), len(tr.ydata)
                 # sys.exit()

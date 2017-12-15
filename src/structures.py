@@ -10,6 +10,8 @@ from pyrocko.guts import List
 from pyrocko.gf import LocalEngine, StaticTarget, SatelliteTarget,\
         RectangularSource
 
+km = 1000.
+
 class patch:
     def __init__(self,name,ss,ds,east,north,down,length,width,strike,dip,
         sig_ss,sig_ds,sig_east,sig_north,sig_down,sig_length,sig_width,sig_strike,sig_dip,
@@ -48,7 +50,9 @@ class patch:
         # number of parameters per patch
         self.Mpatch = len(self.m)
 
-    def connect(self,seg):
+        self._source = None
+
+    def connect(self, seg):
         # set strike
         self.strike= seg.strike
 
@@ -76,7 +80,7 @@ class patch:
 
         for name, m, sig in zip(self.param, self.m, self.sigmam):
             if sig > 0.:
-                # print name, m-sig, m+sig
+                print name, m-sig, m+sig
                 self.mmin.append(m-sig), self.mmax.append(m+sig)
                 if self.dist == 'Normal':
                     p = pymc.Normal(name, mu=m, sd=sig)
@@ -113,33 +117,53 @@ class patch:
         return [self.sss,self.sds,self.sx1,self.sx2,self.sx3,self.sl,
         self.sw,int(self.sstrike),int(self.sdip)]
 
-    def loadEngine(self, store, store_path):
-        # load engine
-        self.eng = LocalEngine(store_superdirs=store_path,default_store_id=store)
+    def update_parameters(self, params):
+        (self.ss, self.ds,
+         self.x1, self.x2, self.x3,
+         self.l, self.w, self.strike,
+         self.dip) = map(float, params)
 
-    def engine(self,target,ref):
+        src = self.source
 
-        # print store_path, store
-        # print ref[0], ref[1]
-        # print self.x1*1000., self.x2*1000., self.x3*1000., self.w*1000., self.l*1000., self.dip,
-        # print np.rad2deg(math.atan2(self.ds,self.ss)), self.strike, self.time, (self.ss**2+self.ds**2)**0.5
-        # print 
+        src.north_shift=self.x1*km
+        src.east_shift=self.x2*km
+        src.depth=self.x3*km
+        src.width=self.w*km
+        src.length=self.l*km
+        src.dip=self.dip
+        src.rake=np.rad2deg(math.atan2(self.ds, self.ss))
+        src.strike=self.strike
+        src.slip=(self.ss**2+self.ds**2)**0.5
 
-        # print self.time
-        self.source = RectangularSource(
-            lon= ref[0], lat = ref[1],
-            # distances in meters
-            north_shift=np.float(self.x1*1000.), east_shift=np.float(self.x2*1000.),
-            depth=np.float(self.x3*1000.), width=np.float(self.w*1000.), length=np.float(self.l*1000.),
-            # angles in degree
-            dip=np.float(self.dip), rake=np.float(np.rad2deg(math.atan2(self.ds,self.ss))), 
-            strike=np.float(self.strike),
-            slip=np.float((self.ss**2+self.ds**2)**0.5),
-            time = self.time,
-            anchor='top')
+        # self.source.regularize()
         # print self.source
 
-        return self.eng.process(self.source, target)
+        self.m = self.tolist()
+
+    @property
+    def source(self):
+        if self._source is None:
+            self._source = RectangularSource(
+                lon=0.,  # Reference set in class inversion
+                lat=0.,
+                # distances in meters
+                north_shift=float(self.x1*km),
+                east_shift=float(self.x2*km),
+                depth=float(self.x3*km),
+                width=float(self.w*km),
+                length=float(self.l*km),
+                # angles in degree
+                dip=float(self.dip),
+                rake=float(np.rad2deg(math.atan2(self.ds,self.ss))), 
+                strike=float(self.strike),
+                slip=float((self.ss**2+self.ds**2)**0.5),
+                time = self.time,
+                anchor='top',
+                decimation_factor=10)
+        return self._source
+
+    def get_source(self):
+        return self.source
 
 class segment:
     def __init__(self,name,ss,ds,east,north,down,length,width,strike,dip,

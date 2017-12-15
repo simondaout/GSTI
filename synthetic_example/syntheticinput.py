@@ -21,9 +21,11 @@ from pyrocko.gf import LocalEngine, StaticTarget, SatelliteTarget,\
     RectangularSource,Target, ws
 from pyrocko import util, pile, model, config, trace, io, pile
 
+op = os.path
+
 
 # define the Green Function store for the synthetic example
-store='ak135_static'
+store='tibet_static'
 # store='test'
 # if not os.path.exists(store):
 #     print 'Downloading gf store from reporisitory'
@@ -54,8 +56,8 @@ left,right,bottom,top=-35,15,-35,15
 # stations_east    = [-15104.34]
 # stations_north    = [-22552.38]
 stations_name = [   'XIAO',    'A01',  'A02',   'A03',   'A04',   'A05' ]
-stations_east    = [-15104.34, -100000.,     0.,      0.,  10000.,  10000. ]
-stations_north    = [-22552.38,  100000., 10000., -10000., -10000.,  10000. ]
+stations_east    = [-15104.34, -10000.,     0.,      0.,  10000.,  10000. ]
+stations_north    = [-22552.38,  10000., 10000., -10000., -10000.,  10000. ]
 Ngps=len(stations_name)
 # print stations_north[0], stations_east[0]
 
@@ -382,7 +384,7 @@ disp[Ninsar:2*Ninsar,0] = disp[Ninsar:2*Ninsar,0]+ramp2
 print 
 
 plotdata = False # if True: plot synthetic data before optimisation
-if plotdata==True:
+if plotdata:
 
     fig, _ = plt.subplots(2,2,figsize=(10,6))
     vranges = [(disp[:2*Ninsar,0].max(),disp[:2*Ninsar,0].min())]
@@ -485,14 +487,14 @@ if plotdata==True:
 ##############################################
 
 # # save interferograms
-savedata = False  # if True: save synthetic data
+savedata = True  # if True: save synthetic data
 
 if savedata==True:
 
-    for tr in synthetic_traces_08:
-        io.save(tr, './synthetic_example/waveforms/2008/'+'{}.{}.{}.{}'.format(tr.network, tr.station, tr.location,tr.channel))
-    for tr in synthetic_traces_09:
-        io.save(tr, './synthetic_example/waveforms/2009/'+'{}.{}.{}.{}'.format(tr.network, tr.station, tr.location,tr.channel))
+    # for tr in synthetic_traces_08:
+    #     io.save(tr, './synthetic_example/waveforms/2008/'+'{}.{}.{}.{}'.format(tr.network, tr.station, tr.location,tr.channel))
+    # for tr in synthetic_traces_09:
+    #     io.save(tr, './synthetic_example/waveforms/2009/'+'{}.{}.{}.{}'.format(tr.network, tr.station, tr.location,tr.channel))
 
     fid = open('./synthetic_example/insar/int_{}-{}.xylos'.format(dates[0],dates[1]),'w')
     # print np.vstack([E[:Ninsar], N[:Ninsar], disp[:Ninsar,0]]).T
@@ -508,23 +510,21 @@ if savedata==True:
     fid.close
 
     # save gps stations locations
-    # fid = open('./synthetic_example/gps/synt_gps_km.txt','w')
-    # print stations_name, np.vstack([stations_east, stations_north]).T
-    # np.savetxt(fid, stations_name, np.vstack([stations_east, stations_north]).T ,header = ' name  x(km)  y(km) ',comments = '# ')
-    # fid.write('\n')
-    # fid.close
+    print stations_name, np.vstack([stations_east, stations_north]).T
+    with open('./synthetic_example/gps/synt_gps_km.txt','w') as fid:
+        for ista, sta in enumerate(stations_name):
+            fid.write('%s    %.1f    %.1f\n' % (sta, float(stations_east[ista]), float(stations_north[ista])))
 
     # save gps time series
     for i in xrange(Ngps):
         # fid = open('./synthetic_example/gps/SYNT/'+stations_name[i]+'.neu','w')
-        fid = open('./synthetic_example/gps/SYNT-DENSE/'+stations_name[i]+'.neu','w')
+        fn_gps = op.join('./synthetic_example/gps/SYNT-DENSE', stations_name[i] + '.neu')
         d = as_strided(disp[2*Ninsar+i*len(t):2*Ninsar+(i+1)*len(t),:])
-        for ii in xrange(len(t)):
-            np.savetxt(fid, np.vstack([t[ii], d[ii,1], d[ii,3], d[ii,2], 0.001, 0.001, 0.005]).T)
-        fid.write('\n')
-        fid.close
-
-    sys.exit()
+        sigma = num.full_like(t, 0.001)
+        sigma_vertical = num.full_like(t, 0.005)
+        gps_data = np.vstack([t, d[:, 1], d[:, 2], d[:, 3], sigma, sigma, sigma_vertical]).T
+        print(gps_data.shape)
+        np.savetxt(fn_gps, gps_data)
 
 #####################################################
 ############ OPTIMISATION PARAMETERS ################
@@ -560,20 +560,20 @@ kernels=[
                 east=east08,
                 north=north08,
                 down=d08,
-                length=l08,
+                length=l08+8,
                 width=W08,
-                strike=strike08,
-                dip=dip08,
+                strike=strike08+10,
+                dip=dip08+5,
 
                 sig_ss=0.,
-                sig_ds=1.,
+                sig_ds=1,
                 sig_east=0,
                 sig_north=0,
                 sig_down=0,
-                sig_length=0.,
+                sig_length=10.,
                 sig_width=0.,
-                sig_strike=0,
-                sig_dip=0.,
+                sig_strike=10,
+                sig_dip=10.,
 
                 prior_dist='Unif',
                 connectivity=False,
@@ -593,23 +593,23 @@ kernels=[
                 name='zongwulong',
                 ss=0.,
                 ds=1.,
-                east=0,
-                north=0,
-                down=0,
+                east=east09,
+                north=north09,
+                down=d09,
                 length=l09,
                 width=W09,
-                strike=0,
-                dip=dip09,
+                strike=strike09,
+                dip=dip09+10,
 
                 sig_ss=0.,
                 sig_ds=1.,
-                sig_east=100.,
-                sig_north=100.,
-                sig_down=100.,
+                sig_east=0.,
+                sig_north=0.,
+                sig_down=0.,
                 sig_length=0.,
                 sig_width=0.,
-                sig_strike=360.,
-                sig_dip=0.,
+                sig_strike=0.,
+                sig_dip=10.,
 
                 prior_dist='Unif',
                 connectivity='xitieshan',
@@ -625,7 +625,7 @@ time0 = '2005-01-01 00:00:0.0'
 basis=[
 # coseismic(name='coseismic', date=t08, m=0., sigmam=0.1),
 # sinterseismic(name='interseismic', date=time0, m=0, sigmam=0.1),
-# interseismic(name='interseismic', date=t0, m=vint, sigmam=0., prior_dist='Unif'),
+# interseismic(name='interseismic', date=time0, m=vint+0.002, sigmam=0.004, prior_dist='Unif'),
 # postseismic(tini = t09, tend= t09+1., Mfunc=1, m=vpost, sigmam=0)
 ]  
 
@@ -635,7 +635,7 @@ basis=[
 # Define timeseries data set: time series will be clean temporally from basis functions
 timeseries=[
     gpstimeseries(
-        network='synt_gps_km_short.txt',
+        network='synt_gps_km.txt',
         # reduction='SYNT', 
         # network='synt_gps_km.txt',
         reduction='SYNT-DENSE', # directory where are the time series
@@ -647,7 +647,7 @@ timeseries=[
         extension='.neu',
         base=[0,0,0],
         sig_base=[0,0,0],
-         ),
+        store_id=store),
      ]
 
 # Define stack data set: velcoity maps, average displacements GPS vectors, interferograms, ect...
@@ -666,7 +666,8 @@ stacks=[
         scale=1.,
         base=[0., 0., 0.],
         sig_base=[0.01,0.01,0.01],
-        dist='Unif'),
+        dist='Unif',
+        store_id=store),
 
     insarstack(
         network='int_{}-{}.xylos'.format(dates[2],dates[3]),
@@ -676,11 +677,15 @@ stacks=[
         tmin= times[2],
         tmax=times[3],
         los=None,
-        # weight=1.,scale=1.,base=[ramp2_b, ramp2_a, ramp2_c],sig_base=[0.,0.,0.],dist='Unif'),
+        # weight=1.,scale=1.,,,dist='Unif'),
         weight=1./sig_insar,
-        scale=1.,base=[0., 0., 0.],
+        scale=1.,
+        base=[0., 0., 0.],
+        # base=[ramp2_b, ramp2_a, ramp2_c],
         sig_base=[0.01,0.01,0.01],
-        dist='Unif'),
+        # sig_base=[0.,0.,0.],
+        dist='Unif',
+        store_id=store),
     ]
 
 seismo=[
@@ -701,7 +706,7 @@ seismo=[
 short_optim = True # if True: fast optimization with scipy
 bayesian = False # if True: bayesian exploration with Adaptative-Metropolis sampling
 MAP = False # if True: display maximum posteriori values using functions in Scipy's optimize
-niter=20000 # number of sampling for exploration
+niter=50000 # number of sampling for exploration
 nburn=10000 # number of burned sampled 
 
 
