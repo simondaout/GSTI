@@ -29,6 +29,6 @@ Installation
 ```sudo python setup.py install```
 
 Synthetic example
-=============
+============
 
 `gsti syntheticinput.py`
